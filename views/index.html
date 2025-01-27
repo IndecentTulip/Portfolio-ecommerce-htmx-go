@@ -1,0 +1,39 @@
+<!-- 
+SiteContext 
+  >
+  PageContext
+    >
+    ProductsList
+      >
+      []Product
+        > 
+        Id 
+        Name
+        Prise
+        Desc
+-->
+{{ block "index" . }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/css/index.css">
+  </head>
+  <body>
+
+  <div class="navbar">
+  </div>
+  <div class="contentContainer">
+    <div id="products" style="display: flex; flex-direction: column;">
+      {{ template "products" .PageContext}}
+    </div>
+  </div>
+ 
+  <script>
+  </script>
+  </body>
+</html>
+{{ end }}

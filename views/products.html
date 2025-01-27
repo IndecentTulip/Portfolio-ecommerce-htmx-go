@@ -1,0 +1,52 @@
+<!--
+PageContext
+  >
+  Start
+  Next 
+  More
+  ProductsList
+    >
+    []Product
+      > 
+      Id 
+      Name
+      Prise
+      Desc
+-->
+{{ block "products" . }}
+  {{ range .ProductsList }}
+    {{ template "product" . }}
+  {{ end }}
+
+  {{ if .More }}
+      <div hx-trigger="revealed" hx-swap="outerHTML" hx-get="/?start={{ .Next }}"></div>
+  {{ end }}
+</div>
+{{ end }}
+<!--
+ProductsList
+  >
+  []Product
+    > 
+    Id 
+    Name
+    Prise
+    Desc
+-->
+{{ block "product" . }}
+<div class="Product" id="product-{{ .Id }}">
+  <hr />
+  <p>{{ .Name }}</p>
+  <p>{{ .Desc }}</p>
+  <p>{{ .Prise}}</p>
+  <hr />
+</div>
+{{ end }}
+
+<!--
+{{ block "oob-product" . }}
+<div id="products" hx-swap-oob="beforeend">
+  {{ template "product" . }}
+</div>
+-->
+{{ end }}
