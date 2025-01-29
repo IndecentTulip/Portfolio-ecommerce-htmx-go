@@ -19,6 +19,7 @@ PageContext
   {{ end }}
 
   {{ if .More }}
+      <!-- a products block will be inserted here -->
       <div hx-trigger="revealed" hx-swap="outerHTML" hx-get="/?start={{ .Next }}"></div>
   {{ end }}
 </div>
@@ -48,5 +49,5 @@ ProductsList
 <div id="products" hx-swap-oob="beforeend">
   {{ template "product" . }}
 </div>
--->
 {{ end }}
+-->

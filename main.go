@@ -66,23 +66,29 @@ type PageContext struct{
   More bool
 }
 
-func newPageContext(start int, next int, more bool, from int, untill int) PageContext{
+type InfiniteScroll struct {
+  start int
+  newStart int
+  more bool
+}
+
+func newPageContext(values InfiniteScroll) PageContext{
   return PageContext{
-    ProductsList: newProductList(from, untill),
-    Start: start,
-    Next: next,
-    More: more,
+    ProductsList: newProductList(values.start, values.newStart),
+    Start: values.start,
+    Next: values.newStart,
+    More: values.more,
   }
 }
 
 // \/\/ FOR THE WHOLE SITE \/\/
-type SiteContext struct {
+type GlobalContext struct {
   PageContext PageContext
 }
 
-func newSiteContext(start int, next int, more bool, from int, untill int) SiteContext{
-  return SiteContext{
-    PageContext: newPageContext(start, next, more, from, untill),
+func newGlobalContext(values InfiniteScroll) GlobalContext{
+  return GlobalContext{
+    PageContext: newPageContext(values),
   } 
 }
 
@@ -100,7 +106,7 @@ func main(){
   e.Static("/static/css", "css")
 
   // TODO
-  // read about OOB and hx-trigger="revealed"  
+  // read about OOB
   e.GET("/", func(c echo.Context) error {
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
@@ -113,8 +119,15 @@ func main(){
 
     //println(start)
     //println(newStart)
+    //println(more)
 
-    Context := newSiteContext(start,newStart,more, start, newStart)
+    var values InfiniteScroll = InfiniteScroll{
+      start: start,
+      newStart: newStart,
+      more: more,
+    }
+
+    Context := newGlobalContext(values)
 
     var sendContext any
 
