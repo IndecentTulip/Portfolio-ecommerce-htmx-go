@@ -27,20 +27,43 @@ SessionContext
   <div class="cart-item" id="item-{{ .Id }}">
     <p>{{ .Name }}</p>
     <p>Quantity:{{ .Quantity }}</p>
+    <button
+      hx-delete="/removefromcart"
+      hx-trigger="click"
+      hx-vals='{"id": {{ .Id }} }'
+      hx-swap="outerHTML"
+      hx-target="#item-{{ .Id }}"
+    >remove</button>
   </div>
   {{ end }}
 {{ end }}
 
 {{ block "cartitems-oob" . }}
   {{ if .IsNew }}
-    <div class="cart-item" hx-swap-oob="beforeend:#items">
-      <p>{{ .Product.Name }}</p>
-      <p>Quantity:{{ .Product.Quantity }}</p>
+    <div id="item-{{ .Product.Id }}" hx-swap-oob="beforeend:#items">
+      <div id="item-{{ .Product.Id }}" class="cart-item" >
+        <p>{{ .Product.Name }}</p>
+        <p>Quantity:{{ .Product.Quantity }}</p>
+        <button
+          hx-delete="/removefromcart"
+          hx-trigger="click"
+          hx-vals='{"id": {{ .Product.Id }} }'
+          hx-swap="outerHTML"
+          hx-target="#item-{{ .Product.Id }}"
+        >remove</button>
+      </div>
     </div>
   {{ else }}
     <div class="cart-item" id="item-{{ .Product.Id }}" hx-swap-oob="outerHTML">
       <p>{{ .Product.Name }}</p>
       <p>Quantity:{{ .Product.Quantity }}</p>
+      <button
+        hx-delete="/removefromcart"
+        hx-trigger="click"
+        hx-vals='{"id": {{ .Product.Id }} }'
+        hx-swap="outerHTML"
+        hx-target="#item-{{ .Product.Id  }}"
+      >remove</button>
     </div>
   {{ end }}
 {{ end }}

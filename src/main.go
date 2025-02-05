@@ -224,6 +224,17 @@ func main(){
     return c.Render(200, "cartitems-oob", sendContext)
   });
 
+  e.DELETE("/removefromcart", func(c echo.Context) error {
+    cartIDStr := c.FormValue("id")
+
+    cartID,_ := strconv.Atoi(cartIDStr)
+
+    db.DeleteFromCart(sqldb, cartID)
+
+    var sendContext any
+
+    return c.Render(200, "temp", sendContext)
+  });
 
 
   e.Logger.Fatal(e.Start(":25258"))

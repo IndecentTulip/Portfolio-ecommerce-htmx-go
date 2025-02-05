@@ -334,7 +334,6 @@ func SelectCartItem(db *sql.DB, productId int) (m.Product, error) {
 }
 
 
-
 func AddToCart(db *sql.DB, SessionId string, ProductId int){
 
   query := `INSERT INTO cart
@@ -349,6 +348,16 @@ func AddToCart(db *sql.DB, SessionId string, ProductId int){
   }
 
 
+}
+
+func DeleteFromCart(db *sql.DB, cartId int){
+
+  query := `DELETE FROM cart WHERE CartId = ?`
+
+	_, err := db.Exec(query, cartId)
+  if err != nil {
+    log.Fatal(err)
+  }
 }
 
 
