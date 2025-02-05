@@ -10,18 +10,24 @@ PageContext
       > 
       Id 
       Name
-      Prise
+      Price
       Desc
 -->
 {{ block "products" . }}
+
   {{ range .ProductsList }}
     {{ template "product" . }}
   {{ end }}
 
   {{ if .More }}
-      <!-- a products block will be inserted here -->
-      <div hx-trigger="revealed" hx-swap="outerHTML" hx-get="/?start={{ .Next }}"></div>
+    <div 
+      hx-trigger="revealed"
+      hx-swap="outerHTML scroll:top"
+      hx-get="/?start={{ .Next }}"
+    ></div>
+
   {{ end }}
+ 
 </div>
 {{ end }}
 <!--
@@ -31,23 +37,25 @@ ProductsList
     > 
     Id 
     Name
-    Prise
+    Price
     Desc
 -->
 {{ block "product" . }}
 <div class="Product" id="product-{{ .Id }}">
   <hr />
-  <p>{{ .Name }}</p>
-  <p>{{ .Desc }}</p>
-  <p>{{ .Prise}}</p>
+  <p>Prod Name: {{ .Name }}</p>
+  <p>Description: {{ .Desc }}</p>
+  <p>Price: {{ .Price}}</p>
+  <p>Stock: {{ .Quantity}}</p>
+  <button 
+    hx-put="/addtocart"
+    hx-trigger="click"
+    hx-vals='{"id": {{ .Id }} }'
+    hx-swap="none"
+    hx-target="#product-{{ .Id }}"
+  > Add to the cart</button>
   <hr />
 </div>
 {{ end }}
 
-<!--
-{{ block "oob-product" . }}
-<div id="products" hx-swap-oob="beforeend">
-  {{ template "product" . }}
-</div>
-{{ end }}
--->
+

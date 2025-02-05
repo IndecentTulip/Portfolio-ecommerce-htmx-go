@@ -1,0 +1,48 @@
+<!--
+SessionContext
+  >
+  SessionID
+  CurrentPage
+  CurrentCart
+    >
+    ProductsList
+      >
+      Id
+      Name
+      Prise
+      Desc
+-->
+
+{{ block "cart" . }}
+  <h2>Cart:</h2>
+  <div id="items">
+
+  {{ template "cartitems" .CurrentCart }}
+  </div>
+  <button hx-put="/buy" hx-trigger="click">Buy</button>
+{{ end }}
+
+{{ block "cartitems" . }}
+  {{ range .ProductsList }}
+  <div class="cart-item" id="item-{{ .Id }}">
+    <p>{{ .Name }}</p>
+    <p>Quantity:{{ .Quantity }}</p>
+  </div>
+  {{ end }}
+{{ end }}
+
+{{ block "cartitems-oob" . }}
+  {{ if .IsNew }}
+    <div class="cart-item" hx-swap-oob="beforeend:#items">
+      <p>{{ .Product.Name }}</p>
+      <p>Quantity:{{ .Product.Quantity }}</p>
+    </div>
+  {{ else }}
+    <div class="cart-item" id="item-{{ .Product.Id }}" hx-swap-oob="outerHTML">
+      <p>{{ .Product.Name }}</p>
+      <p>Quantity:{{ .Product.Quantity }}</p>
+    </div>
+  {{ end }}
+{{ end }}
+
+<!--hx-vals='{"id": {{ .Id }} }'-->

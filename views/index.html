@@ -11,6 +11,19 @@ SiteContext
         Name
         Prise
         Desc
+  >
+  SessionContext
+    >
+    SessionID
+    CurrentPage
+    CurrentCart
+      >
+      ProductsList
+        >
+        Id
+        Name
+        Prise
+        Desc
 -->
 {{ block "index" . }}
 <!DOCTYPE html>
@@ -22,18 +35,29 @@ SiteContext
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="/css/index.css">
   </head>
-  <body>
+  <body id="body">
 
-  <div class="navbar">
+  <div class="navbar" >
       <h1>navbar</h1>
   </div>
-  <div class="contentContainer">
-    <div id="products" style="display: flex; flex-direction:column;">
-      {{ template "products" .PageContext}}
+    <div id="contentcontainer" class="contentcontainer">
+      <div id="cart" style="position: fixed; right: 0; top: 0; width: 200px; background-color: #f0f0f0; height: 100vh; overflow: scroll;">
+        {{ template "cart" .SessionContext }}
+      </div>
+      <div id="products" style="display: flex; flex-direction: column; margin-right: 220px;">
+        {{ template "products" .PageContext}}
+      </div>
+      <div>
+        {{ template "nextpage" .PageContext}}
+      </div>
     </div>
-  </div>
  
   <script>
+    window.onload = function() {
+      token = "{{ .SessionContext.SessionID }}"
+      document.cookie = "session=" + token;
+      alert("token: " + document.cookie);
+    }
   </script>
   </body>
 </html>

@@ -1,0 +1,15 @@
+{{ block "nextpage" . }}
+<div>
+  {{ range .NextProductsNums }}
+    <span
+      hx-trigger="click"
+      hx-put="/tabnum" 
+      hx-vals='{"num": {{ . }} }'
+      hx-swap="outerhtml" 
+      hx-target="#body"
+      > {{ . }}
+    </span>
+  {{ end }}
+</div>
+{{ end }}
+
