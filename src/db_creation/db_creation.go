@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
-  m "htmxNpython/misc"
+	m "htmxNpython/misc"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -50,7 +52,9 @@ func insertIntoProducts(db *sql.DB) {
     query := `INSERT INTO products (name, price, desc, quantity) VALUES (?, ?, ?, ?)`
     
     for i := 0; i < 100; i++ {
-      _, err := db.Exec(query, "product " + strconv.Itoa(i) , 25 + i, "lorem ipsum", 3)
+      desc := "lorem Ipsum"
+      if i > 50{ desc = "DEMO DEMO DEMO"}
+      _, err := db.Exec(query, "product " + strconv.Itoa(i), 25 + i, desc , 3)
       if err != nil {
           log.Fatal(err)
       }
@@ -59,39 +63,50 @@ func insertIntoProducts(db *sql.DB) {
     fmt.Println("Data inserted successfully!")
 }
 
-func GetProductsList(db *sql.DB, from int, untill int) []m.Product {
-  query := `SELECT id, name, price, desc, quantity FROM products WHERE id = ?`
-
-  var rowData []m.Product
-
-  for i := from; i < untill; i++{
-    rows, err := db.Query(query, i+1)
-    if err != nil {
-      log.Fatal(err)
-    }
-
-    //fmt.Println("I WAS CALLED: " + strconv.Itoa(i+1))
-
-    var id int
-    var name string
-    var price int
-    var desc string
-    var quantity int
-
-    for rows.Next() {
-      err := rows.Scan(&id, &name, &price, &desc, &quantity)
-      if err != nil {
-          log.Fatal(err)
-      }
+func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
+  query := `
+      SELECT
+      COUNT(*) OVER() AS total,
+      id, name, price, desc, quantity 
+      FROM products 
+      LIMIT 10
+      OFFSET ?`
       
-      rowData = append(rowData, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
-    }
+  var ProductList []m.Product
 
-    defer rows.Close()
+  rows, err := db.Query(query, offset)
+  if err != nil {
+    log.Fatal(err)
   }
 
-  return rowData
+  var total int
+  var id int
+  var name string
+  var price int
+  var desc string
+  var quantity int
+
+  for rows.Next() {
+    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    println("product list: adding:")
+    println(name)
+    ProductList = append(ProductList, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+  }
+  println("product list total:")
+  println(total)
+
+  defer rows.Close()
+
+  return ProductList, total
+
 }
+
+
+
 func GetProduct(db *sql.DB, prodId int) m.Product {
   query := `SELECT id, name, price, desc, quantity FROM products WHERE id = ?`
 
@@ -122,6 +137,68 @@ func GetProduct(db *sql.DB, prodId int) m.Product {
   return product
 
 }
+
+func GetProductSearch(db *sql.DB, term string, offset int) ([]m.Product, int) {
+  terms := strings.Split(term, " ")
+  query := `
+      SELECT
+      COUNT(*) OVER() AS total,
+      id, name, price, desc, quantity 
+      FROM products 
+      WHERE ` + helpterBuildWhereClause(len(terms)) + `
+      COLLATE NOCASE
+      LIMIT 10
+      OFFSET ?`
+      
+
+  params := make([]interface{}, 0, len(terms)*2)
+  for _, term := range terms {
+      term = "%" + term + "%"
+      params = append(params, term, term)
+  }
+  params = append(params, offset)
+
+  var searchProductList []m.Product
+
+  rows, err := db.Query(query, params...)
+  if err != nil {
+    log.Fatal(err)
+  }
+
+  var total int
+  var id int
+  var name string
+  var price int
+  var desc string
+  var quantity int
+
+  for rows.Next() {
+    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    println("search: adding:")
+    println(name)
+    searchProductList = append(searchProductList, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+  }
+  println("search total:")
+  println(total)
+
+  defer rows.Close()
+
+  return searchProductList, total
+
+}
+
+func helpterBuildWhereClause(termCount int) string {
+    var clauses []string
+    for i := 0; i < termCount; i++ {
+        clauses = append(clauses, "(name LIKE ? OR desc LIKE ?)")
+    }
+    return strings.Join(clauses, " AND ")
+}
+
 
 //func queryData(db *sql.DB) {
 //    rows, err := db.Query("SELECT id, name, age FROM users")
@@ -159,18 +236,23 @@ func GetProduct(db *sql.DB, prodId int) m.Product {
 //}
 
 type Session struct {
-	ID            string
-	UserID        int
-	CreatedAt     int64
-	CurrentPage   int64
+	ID                string
+	UserID            int
+	CreatedAt         int64
+	CurrentPage       int64
+  CurrentPageSearch int64
+  Searching         bool
 }
+
 // user_id INTEGER,
 func CreateSessionsTable(db *sql.DB) {
   query := `
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       created_at INTEGER,
-      current_page INTEGER
+      current_page INTEGER,
+      current_page_search INTEGER, 
+      searching INTEGER
     );
   `
   _, err := db.Exec(query)
@@ -187,8 +269,11 @@ func CreateSession(db *sql.DB) (string, error) {
 
   sessionID := "se" + strconv.FormatInt(calc, 10) 
 
-  query := `INSERT INTO sessions (id, created_at, current_page) VALUES (?, ?, ?)`
-	_, errexec := db.Exec(query, sessionID, createdAt, 1)
+  query := `INSERT INTO sessions (id, created_at, current_page, current_page_search, searching) VALUES (?, ?, ?, ?, ?)`
+  // FOR searching 
+  // 0 = no
+  // 1 = yes
+	_, errexec := db.Exec(query, sessionID, createdAt, 1, 1, 0)
 	return sessionID, errexec
 }
 
@@ -212,15 +297,61 @@ func UpdatePageNumSes(db *sql.DB, sessionID string, num int) error {
   return nil
 }
 
+func UpdatePageSearchNumSes(db *sql.DB, sessionID string, num int) error {
+  query := `UPDATE sessions SET current_page_search = ? WHERE id = ?`
+
+  // Using Exec() for UPDATE query since it doesn't return rows.
+  res, err := db.Exec(query, num, sessionID)
+  if err != nil {
+    fmt.Println("Error executing query:", err)
+    return err
+  }
+
+  rowsAffected, err := res.RowsAffected()
+  if rowsAffected == 0 {
+    fmt.Println("No rows updated. Session ID might not exist.")
+  } else {
+    fmt.Println("Updated", rowsAffected, "row(s).")
+  }
+
+  return nil
+}
+func UpdateSearchingStatus(db *sql.DB, sessionID string, status bool) error {
+  query := `UPDATE sessions SET searching = ? WHERE id = ?`
+
+  var statusInt int
+  if status {
+    statusInt = 1
+  }else{
+    statusInt = 0
+  }
+  // Using Exec() for UPDATE query since it doesn't return rows.
+  res, err := db.Exec(query, statusInt, sessionID)
+  if err != nil {
+    fmt.Println("Error executing query:", err)
+    return err
+  }
+
+  rowsAffected, err := res.RowsAffected()
+  if rowsAffected == 0 {
+    fmt.Println("No rows updated. Session ID might not exist.")
+  } else {
+    fmt.Println("Updated", rowsAffected, "row(s).")
+  }
+
+  return nil
+}
+
+
 
 func GetSession(db *sql.DB, sessionID string) (Session, error) {
 	var session Session
 
-	query := `SELECT created_at, current_page FROM sessions WHERE id = ?`
+	query := `SELECT created_at, current_page, current_page_search FROM sessions WHERE id = ?`
 	row := db.QueryRow(query, sessionID)
   println(sessionID)
 
-  err := row.Scan(&session.CreatedAt, &session.CurrentPage)
+  err := row.Scan(&session.CreatedAt, &session.CurrentPage, &session.CurrentPageSearch)
 	if err != nil {
 		return session, err
 	}

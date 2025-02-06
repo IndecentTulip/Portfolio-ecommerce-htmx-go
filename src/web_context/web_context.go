@@ -12,52 +12,26 @@ import (
 // \/\/ PRODUCTS \/\/
 // TODO STORE ID ON THE DB
 
-
-func NewProduct(id int, name string, price int, desc string, quantity int) m.Product{
-  return m.Product{
-    Id: id,
-    Name: name,
-    Price: price,
-    Desc: desc,
-    Quantity: quantity,
-  }
-}
-
 type ProductsList = []m.Product
-
-func NewProductList(sqldb *sql.DB, from int, untill int) ProductsList{
-  var products ProductsList
-  productList := db.GetProductsList(sqldb, from, untill)
-  diff := untill - from
-  for i := 0; i < diff; i++ {
-
-    products = append(products, NewProduct(productList[i].Id, productList[i].Name, productList[i].Price, productList[i].Desc, productList[i].Quantity))
-  }
-  return products
-}
-
 
 // \/\/ FOR THINGS THAT ARE SORED ON THE SERVER \/\/
 
 type PageContext struct{
   ProductsList ProductsList
-  Start int
   Next int
   More bool
   NextProductsNums []int
 }
 
 type InfiniteScroll struct {
-  Start int
   NewStart int
   More bool
   NextProductsNums []int
 }
 
-func NewPageContext(sqldb *sql.DB, values InfiniteScroll) PageContext{
+func NewPageContext(sqldb *sql.DB, values InfiniteScroll, productList []m.Product) PageContext{
   return PageContext{
-    ProductsList: NewProductList(sqldb, values.Start, values.NewStart),
-    Start: values.Start,
+    ProductsList: productList,
     Next: values.NewStart,
     More: values.More,
     NextProductsNums: values.NextProductsNums,
@@ -83,7 +57,6 @@ type CurrentCart struct{
 func CreateCurentCart(sqldb *sql.DB, token string) CurrentCart{
 
   items,_ := db.SelectCart(sqldb, token)
-  println("TEST id")
 
   return CurrentCart{
     ProductsList: items,
@@ -93,6 +66,7 @@ func CreateCurentCart(sqldb *sql.DB, token string) CurrentCart{
 type SessionContext struct{
   SessionID string
   CurrentPage int
+  CurrentPageSearch int
   CurrentCart CurrentCart 
 }
 
@@ -110,14 +84,13 @@ type GlobalContext struct {
   SessionContext SessionContext
 }
 
-func NewGlobalContext(sqldb *sql.DB, values InfiniteScroll, token string, pagenum int) GlobalContext{
+func NewGlobalContext(sqldb *sql.DB, values InfiniteScroll, token string, pagenum int, productsList []m.Product) GlobalContext{
   return GlobalContext{
-    PageContext: NewPageContext(sqldb, values),
+    PageContext: NewPageContext(sqldb, values, productsList),
     SessionContext: NewSessionContext(sqldb, token, pagenum),
   } 
 }
 
 // ^^^^ page content ^^^^
-
 
 

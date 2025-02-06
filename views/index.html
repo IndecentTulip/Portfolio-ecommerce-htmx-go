@@ -37,21 +37,30 @@ SiteContext
   </head>
   <body id="body">
 
-  <div class="navbar" >
-      <h1>navbar</h1>
-  </div>
-    <div id="contentcontainer" class="contentcontainer">
-      <div id="cart" style="position: fixed; right: 0; top: 0; width: 200px; background-color: #f0f0f0; height: 100vh; overflow: scroll;">
-        {{ template "cart" .SessionContext }}
-      </div>
-      <div id="products" style="display: flex; flex-direction: column; margin-right: 220px;">
-        {{ template "products" .PageContext}}
-      </div>
-      <div>
-        {{ template "nextpage" .PageContext}}
-      </div>
+    <div class="navbar" >
+        <h1>navbar</h1>
     </div>
- 
+    <div id="searchbar" class="searchbar">
+      <h2>
+        Search Though Products 
+        <span class="htmx-indicator">
+          <span>Searching...<span>
+        </span>
+      </h2>
+      <input 
+        class="form-control" type="search"
+        name="search" placeholder="Begin Typing To Search Products..."
+        hx-post="/search"
+        hx-target="#contentcontainer"
+        hx-indicator=".htmx-indicator"
+        hx-swap="outerHTML"
+      >
+    </div>
+    <div id="cart" style="position: fixed; right: 0; top: 0; width: 150px; background-color: #f0f0f0; height: 100vh; overflow: scroll;">
+      {{ template "cart" .SessionContext }}
+    </div>
+    {{ template "content" .}}
+
   <script>
     window.onload = function() {
       token = "{{ .SessionContext.SessionID }}"
@@ -61,4 +70,13 @@ SiteContext
   </script>
   </body>
 </html>
+{{ end }}
+
+{{ block "content" . }}
+  <div id="contentcontainer" class="contentcontainer">
+    <div id="products" style="display: flex; flex-direction: column; margin-right: 220px;">
+      {{ template "products" .PageContext}}
+    </div>
+
+  </div>
 {{ end }}
