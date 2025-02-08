@@ -6,7 +6,6 @@ import (
 	db "htmxNpython/db_creation"
 	tr "htmxNpython/temp_render"
 	wc "htmxNpython/web_context"
-	"time"
 
 	m "htmxNpython/misc"
 	"strconv"
@@ -256,9 +255,6 @@ func main(){
   });
 
   e.GET("/search", func(c echo.Context) error {
-    // ROMOVE THIS, IT'S FOR TESTING ONLY
-    time.Sleep(25* time.Second)
-
     sessionID := handleSessionWithoutAcc(sqldb,c)
 
     startStr := c.QueryParam("start")
