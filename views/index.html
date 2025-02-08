@@ -45,14 +45,14 @@ SiteContext
     <div id="searchbar" class="searchbar">
       <h2>
         Search Though Products 
-        <span class="htmx-indicator">
+        <div class="htmx-indicator" style="color: green;">
           <span>Searching...<span>
-        </span>
+        </div>
       </h2>
       <input 
         class="form-control" type="search"
         name="search" placeholder="Begin Typing To Search Products..."
-        hx-get="/search"
+        hx-get="/search?newSearch=1"
         hx-target="#products"
         hx-indicator=".htmx-indicator"
         hx-swap="innerHTML"

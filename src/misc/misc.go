@@ -7,7 +7,6 @@ type Product struct {
   Desc string
   Quantity int
 }
-// TODO ADD QUANTITY
 
 type Session struct {
 	ID                string
@@ -15,6 +14,11 @@ type Session struct {
 	CreatedAt         int64
 	CurrentPage       int64
   CurrentPageSearch int64
+}
+
+type ProductNumsElement struct{   
+  Num int
+  SearchTerm string
 }
 
 func NewProduct(id int, name string, price int, desc string, quantity int) Product{
@@ -27,13 +31,15 @@ func NewProduct(id int, name string, price int, desc string, quantity int) Produ
   }
 }
 
-func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int) []int {
+func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int, searchTerm string) []ProductNumsElement {
     totalPages := (totalProducts + itemsPerPage - 1) / itemsPerPage
     currentPage := currentOffset / itemsPerPage
-    var nums []int
-
+    
+    var values []ProductNumsElement
+    
     // Always show first page
-    nums = append(nums, 0)
+    first_page := ProductNumsElement{Num: 0, SearchTerm: searchTerm}
+    values = append(values, first_page)
 
     // Calculate window of pages around current
     startPage := max(1, currentPage-2)
@@ -41,15 +47,17 @@ func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts 
 
     // Add pages in window
     for page := startPage; page <= endPage; page++ {
-        nums = append(nums, page*itemsPerPage)
+        temp := ProductNumsElement{Num: page*itemsPerPage, SearchTerm: searchTerm}
+        values = append(values, temp)
     }
 
     // Always show last page if not already included
     if endPage < totalPages-1 {
-        nums = append(nums, (totalPages-1)*itemsPerPage)
+        temp := ProductNumsElement{Num: (totalPages-1)*itemsPerPage, SearchTerm: searchTerm}
+        values = append(values, temp)
     }
 
-    return unique(nums)
+    return unique(values)
 }
 
 func max(a, b int) int {
@@ -66,12 +74,13 @@ func min(a, b int) int {
     return b
 }
 
-func unique(input []int) []int {
+func unique(input []ProductNumsElement) []ProductNumsElement {
     seen := make(map[int]bool)
-    result := []int{}
+    result := []ProductNumsElement{}
     for _, val := range input {
-        if !seen[val] {
-            seen[val] = true
+        checkVal := val.Num
+        if !seen[checkVal] {
+            seen[checkVal] = true
             result = append(result, val)
         }
     }

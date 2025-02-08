@@ -6,6 +6,7 @@ import (
 	db "htmxNpython/db_creation"
 	tr "htmxNpython/temp_render"
 	wc "htmxNpython/web_context"
+	"time"
 
 	m "htmxNpython/misc"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool) []int {
+func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool, searchTerm string) []m.ProductNumsElement {
   const ITEMS_PER_PAGE = 20
   // MAKE IT NOT ONLY FOR SEARCH
   var currentOffset int
@@ -26,11 +27,7 @@ func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool
     currentOffset = (int(sessionInfo.CurrentPage) - 1) * ITEMS_PER_PAGE
   }
   
-  return m.GenerateNextProductNums(
-      currentOffset,
-      ITEMS_PER_PAGE,
-      totalProducts,
-  )
+  return m.GenerateNextProductNums(currentOffset, ITEMS_PER_PAGE, totalProducts, searchTerm)
 }
 
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
@@ -79,6 +76,8 @@ func main(){
     // 2 : 20 - 30
     // 3 : 40 - 50
     page := int(int(sessionInfo.CurrentPage) - 1)
+    db.UpdatePageSearchNumSes(sqldb,sessionID,1)
+    db.UpdateSearchingStatus(sqldb,sessionID,false)
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
 
@@ -109,12 +108,12 @@ func main(){
     println(start)
     println(newStart)
     
-    var nextProductsNums []int 
+    var nextProductsNums []m.ProductNumsElement 
     if !(start > range_start){
-      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false)
+      searchTerm := ""
+      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false,searchTerm)
     }
 
-    
     // <><><>
     loadIndex := false
     if start == range_start {
@@ -159,9 +158,13 @@ func main(){
 
   e.PUT("/tabnum", func(c echo.Context) error {
 
-    numStr := c.FormValue("num")
+    numStr := c.QueryParam("num")
+    searchTerm := c.QueryParam("search")
 
-    num,_ := strconv.Atoi(numStr)
+    num,err := strconv.Atoi(numStr)
+    if err != nil{
+      num = 0
+    }
 
     sessionID := handleSessionWithoutAcc(sqldb,c)
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
@@ -171,14 +174,28 @@ func main(){
 
     println(sessionID)
     println(num)
+    println(searchTerm)
     println(range_end)
 
     newPageNum := num / ITEMS_PER_PAGE
     newPageNum++
     
-    db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
+    type SendContext struct{
+      IsSearching bool
+      SearchTerm string
+    }
+    isSearching := false
+    if searchTerm != ""{
+      db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
+      isSearching = true
+    }else{
+      db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
+    }
 
-    var sendContext any
+    sendContext := SendContext{
+      IsSearching: isSearching,
+      SearchTerm: searchTerm,
+    }
 
     return c.Render(200, "restartpage", sendContext)
   });
@@ -239,10 +256,19 @@ func main(){
   });
 
   e.GET("/search", func(c echo.Context) error {
+    // ROMOVE THIS, IT'S FOR TESTING ONLY
+    time.Sleep(25* time.Second)
+
     sessionID := handleSessionWithoutAcc(sqldb,c)
 
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
+
+    newSearchStr := c.QueryParam("newSearch")
+    newSearch,erro := strconv.Atoi(newSearchStr)
+    if erro != nil{
+      newSearch = 0
+    }
 
     //<><>
     searchTerm := c.QueryParam("search")
@@ -257,18 +283,25 @@ func main(){
     }
 
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
-    productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
-
-    println(PRODUCTNUM)
-
+    // page is needed to understand if you need to lazy load more content
     page := int(int(sessionInfo.CurrentPageSearch) - 1)
 
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
 
-    var nextProductsNums []int 
+    // start is needed to understand what is the current OFFSET for the SELECT query is 
+    if err != nil {
+      start = range_start 
+    }
+
+    productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
+    println(PRODUCTNUM)
+
+
+
+    var nextProductsNums []m.ProductNumsElement 
     if !(start > range_start){
-      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false)
+      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false, searchTerm)
     }
 
     println("FOR SEARCH ranges")
@@ -277,9 +310,6 @@ func main(){
     println(range_end)
 
     // TODO CHANGE THIS
-    if err != nil {
-      start = range_start 
-    }
 
     page_range := start >= range_start && start <= range_end  
 
@@ -293,6 +323,11 @@ func main(){
     println("FOR SEARCH starts")
     println(start)
     println(newStart)
+
+    loadIndex := false
+    if (start == range_start) && newSearch != 1 {
+      loadIndex = true
+    }
 
     if newStart > range_end{
       more = false
@@ -316,6 +351,11 @@ func main(){
     sendContext = webContext.PageContext
 
     template := "products"
+    if loadIndex {
+      template = "index"
+      sendContext = webContext
+    }
+
     if !page_range{
       template = "none"
     }

@@ -14,6 +14,7 @@ import (
 
 type ProductsList = []m.Product
 
+
 // \/\/ FOR THINGS THAT ARE SORED ON THE SERVER \/\/
 
 type PageContext struct{
@@ -22,13 +23,13 @@ type PageContext struct{
   More bool
   Searching bool
   SearchTerm string
-  NextProductsNums []int
+  NextProductsNums []m.ProductNumsElement
 }
 
 type InfiniteScroll struct {
   NewStart int
   More bool
-  NextProductsNums []int
+  NextProductsNums []m.ProductNumsElement
 }
 
 func NewPageContext(sqldb *sql.DB, values InfiniteScroll, productList []m.Product, isSearching bool, term string) PageContext{
