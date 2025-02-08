@@ -137,7 +137,7 @@ func main(){
       NextProductsNums: nextProductsNums,
     }
 
-    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1, productList)
+    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1, productList, false,"")
 
     var sendContext interface{}
 
@@ -238,17 +238,15 @@ func main(){
     return c.Render(200, "temp", sendContext)
   });
 
-  e.POST("/search", func(c echo.Context) error {
-    // <><> session related <><>
-
+  e.GET("/search", func(c echo.Context) error {
     sessionID := handleSessionWithoutAcc(sqldb,c)
 
-    // TODO CHANGE THIS
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
 
     //<><>
-    searchTerm := c.FormValue("search")
+    searchTerm := c.QueryParam("search")
+    println(searchTerm)
     searchTerm = strings.TrimSpace(searchTerm)  // Remove whitespace
     searchTerm = html.EscapeString(searchTerm) // Prevent XSS
 
@@ -259,9 +257,7 @@ func main(){
     }
 
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
-    productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,10)
-
-    nextProductsNums := GetNextProductNums(sessionInfo,PRODUCTNUM,true)
+    productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
 
     println(PRODUCTNUM)
 
@@ -269,6 +265,11 @@ func main(){
 
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
+
+    var nextProductsNums []int 
+    if !(start > range_start){
+      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false)
+    }
 
     println("FOR SEARCH ranges")
     println(page)
@@ -285,11 +286,6 @@ func main(){
     println(page_range)
 
     // <><>
-    loadIndex := false
-    if start == range_start {
-      loadIndex = true
-    }
-
     // <><>
     var newStart = start + (ITEMS_PER_PAGE/2)
     var more = newStart <= PRODUCTNUM
@@ -313,18 +309,13 @@ func main(){
       NextProductsNums: nextProductsNums,
     }
 
-    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1,productList)
+    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1,productList, true, searchTerm)
 
     var sendContext any
 
     sendContext = webContext.PageContext
 
     template := "products"
-    if loadIndex {
-      template = "content"
-      sendContext = webContext
-    }
-
     if !page_range{
       template = "none"
     }

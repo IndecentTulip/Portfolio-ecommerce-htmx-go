@@ -20,6 +20,8 @@ type PageContext struct{
   ProductsList ProductsList
   Next int
   More bool
+  Searching bool
+  SearchTerm string
   NextProductsNums []int
 }
 
@@ -29,9 +31,11 @@ type InfiniteScroll struct {
   NextProductsNums []int
 }
 
-func NewPageContext(sqldb *sql.DB, values InfiniteScroll, productList []m.Product) PageContext{
+func NewPageContext(sqldb *sql.DB, values InfiniteScroll, productList []m.Product, isSearching bool, term string) PageContext{
   return PageContext{
     ProductsList: productList,
+    Searching: isSearching,
+    SearchTerm: term,
     Next: values.NewStart,
     More: values.More,
     NextProductsNums: values.NextProductsNums,
@@ -84,9 +88,9 @@ type GlobalContext struct {
   SessionContext SessionContext
 }
 
-func NewGlobalContext(sqldb *sql.DB, values InfiniteScroll, token string, pagenum int, productsList []m.Product) GlobalContext{
+func NewGlobalContext(sqldb *sql.DB, values InfiniteScroll, token string, pagenum int, productsList []m.Product, isSearching bool,term string) GlobalContext{
   return GlobalContext{
-    PageContext: NewPageContext(sqldb, values, productsList),
+    PageContext: NewPageContext(sqldb, values, productsList, isSearching, term),
     SessionContext: NewSessionContext(sqldb, token, pagenum),
   } 
 }

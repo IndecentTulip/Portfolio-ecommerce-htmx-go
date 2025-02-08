@@ -16,6 +16,8 @@ SiteContext
     >
     SessionID
     CurrentPage
+    Searching(bool)
+    SearchTerm
     CurrentCart
       >
       ProductsList
@@ -50,10 +52,10 @@ SiteContext
       <input 
         class="form-control" type="search"
         name="search" placeholder="Begin Typing To Search Products..."
-        hx-post="/search"
-        hx-target="#contentcontainer"
+        hx-get="/search"
+        hx-target="#products"
         hx-indicator=".htmx-indicator"
-        hx-swap="outerHTML"
+        hx-swap="innerHTML"
       >
     </div>
     <div id="cart" style="position: fixed; right: 0; top: 0; width: 150px; background-color: #f0f0f0; height: 100vh; overflow: scroll;">

@@ -4,6 +4,7 @@ PageContext
   Start
   Next 
   More
+  SearchTerm
   ProductsList
     >
     []Product
@@ -20,11 +21,21 @@ PageContext
   {{ end }}
 
   {{ if .More }}
-    <div 
-      hx-trigger="revealed"
-      hx-swap="outerHTML scroll:top"
-      hx-get="/?start={{ .Next }}"
-    ></div>
+    {{ if .Searching}}
+      <div 
+        hx-trigger="revealed"
+        hx-swap="outerHTML scroll:top"
+        hx-get="/search?start={{ .Next }}&search={{ .SearchTerm }}"
+      ></div>
+
+    {{ else }}
+      <div 
+        hx-trigger="revealed"
+        hx-swap="outerHTML scroll:top"
+        hx-get="/?start={{ .Next }}"
+      ></div>
+    {{ end }}
+
 
   {{ end }}
  
