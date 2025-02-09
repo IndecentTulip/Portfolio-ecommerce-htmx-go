@@ -201,10 +201,9 @@ func main(){
 
   e.PUT("/addtocart", func(c echo.Context) error {
 
-    productIDStr := c.FormValue("id")
-
-    productID,_ := strconv.Atoi(productIDStr)
-
+    productID := c.QueryParam("id")
+    println("!!!! API /addtocart !!!!")
+    println(productID)
     // not using a function because in case someone not having sessionID
     // they should not be able to add anything to the cart in the first place
     sessionID := c.Request().Header.Get("Cookie")
@@ -217,25 +216,21 @@ func main(){
 
     productInfo,_ := db.SelectCartItem(sqldb,productID)
 
-    type Product = m.Product
+    type CartItem = m.CartItem
 
     type oobProduct struct{
-      Product Product
+      CartItem CartItem
       IsNew   bool
     }
     var isNew bool
-    if productInfo.Quantity <= 1 {
+    if productInfo.Product.Quantity <= 1 {
       isNew = true 
     }else{
       isNew = false 
     }
 
     sendContext := oobProduct{
-      Product: Product{
-        Id: productInfo.Id,
-        Name: productInfo.Name,
-        Quantity: productInfo.Quantity,    
-      },
+      CartItem: productInfo,
       IsNew: isNew,
     } 
 
@@ -243,11 +238,9 @@ func main(){
   });
 
   e.DELETE("/removefromcart", func(c echo.Context) error {
-    cartIDStr := c.FormValue("id")
+    productID := c.QueryParam("id")
 
-    cartID,_ := strconv.Atoi(cartIDStr)
-
-    db.DeleteFromCart(sqldb, cartID)
+    db.DeleteFromCart(sqldb, productID)
 
     var sendContext any
 
@@ -359,6 +352,18 @@ func main(){
     return c.Render(200, template, sendContext)
 
   });
+
+  e.GET("/c/:cart_id", func(c echo.Context) error {
+
+    cartID := c.Param("cart_id")
+    println(cartID)
+
+    var sendContext any
+
+    return c.Render(404,"index", sendContext)
+  });
+
+
 
   e.Logger.Fatal(e.Start(":25258"))
 }

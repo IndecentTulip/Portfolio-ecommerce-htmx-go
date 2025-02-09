@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+  "github.com/google/uuid"
 
 	m "htmxNpython/misc"
 
@@ -17,7 +18,7 @@ import (
 func CreateProductsTable(db *sql.DB) {
   query := `
     CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT PRIMARY KEY,
       name TEXT,
       price INTEGER,
       desc TEXT,
@@ -32,35 +33,35 @@ func CreateProductsTable(db *sql.DB) {
 }
 
 func insertIntoProducts(db *sql.DB) {
-    rows, err := db.Query("SELECT id FROM products")
+  checkQuery := `SELECT COUNT(*) FROM products`
+
+  rows,_ := db.Query(checkQuery)
+  var num int
+
+  for rows.Next() {
+    err := rows.Scan(&num)
     if err != nil {
         log.Fatal(err)
     }
-    defer rows.Close()
-
-    for rows.Next() {
-      var id int
-        if err := rows.Scan(&id); err != nil {
-          log.Fatal(err)
-        }
-        if id == 100 {
-          log.Printf("Products already created")
-          return
-        }
+  }
+  if num >= 100 {
+    println("Products are already inserted")
+    return
+  }
+  
+  query := `INSERT INTO products (id, name, price, desc, quantity) VALUES (?, ?, ?, ?, ?)`
+  
+  for i := 0; i < 100; i++ {
+    desc := "lorem Ipsum"
+    uniqueID := uuid.New().String()
+    if i > 50{ desc = "DEMO DEMO DEMO"}
+    _, err := db.Exec(query, uniqueID, "product " + strconv.Itoa(i), 25 + i, desc , 3)
+    if err != nil {
+        log.Fatal(err)
     }
+  }
 
-    query := `INSERT INTO products (name, price, desc, quantity) VALUES (?, ?, ?, ?)`
-    
-    for i := 0; i < 100; i++ {
-      desc := "lorem Ipsum"
-      if i > 50{ desc = "DEMO DEMO DEMO"}
-      _, err := db.Exec(query, "product " + strconv.Itoa(i), 25 + i, desc , 3)
-      if err != nil {
-          log.Fatal(err)
-      }
-    }
-
-    fmt.Println("Data inserted successfully!")
+  fmt.Println("Data inserted successfully!")
 }
 
 func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
@@ -80,7 +81,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
   }
 
   var total int
-  var id int
+  var id string
   var name string
   var price int
   var desc string
@@ -93,6 +94,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
     }
     
     println("product list: adding:")
+    println(id)
     println(name)
     ProductList = append(ProductList, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
   }
@@ -107,7 +109,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
 
 
 
-func GetProduct(db *sql.DB, prodId int) m.Product {
+func GetProduct(db *sql.DB, prodId string) m.Product {
   query := `SELECT id, name, price, desc, quantity FROM products WHERE id = ?`
 
   var product m.Product
@@ -117,7 +119,7 @@ func GetProduct(db *sql.DB, prodId int) m.Product {
     log.Fatal(err)
   }
 
-  var id int
+  var id string
   var name string
   var price int
   var desc string
@@ -166,7 +168,7 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]m.Product, int) {
   }
 
   var total int
-  var id int
+  var id string
   var name string
   var price int
   var desc string
@@ -199,42 +201,6 @@ func helpterBuildWhereClause(termCount int) string {
     return strings.Join(clauses, " AND ")
 }
 
-
-//func queryData(db *sql.DB) {
-//    rows, err := db.Query("SELECT id, name, age FROM users")
-//    if err != nil {
-//        log.Fatal(err)
-//    }
-//    defer rows.Close()
-//
-//    for rows.Next() {
-//        var id int
-//        var name string
-//        var age int
-//        if err := rows.Scan(&id, &name, &age); err != nil {
-//            log.Fatal(err)
-//        }
-//        fmt.Printf("ID: %d, Name: %s, Age: %d\n", id, name, age)
-//    }
-//}
-//
-//func updateData(db *sql.DB) {
-//    query := `UPDATE users SET age = ? WHERE name = ?`
-//    _, err := db.Exec(query, 30, "Alice")
-//    if err != nil {
-//        log.Fatal(err)
-//    }
-//    fmt.Println("Data updated successfully!")
-//}
-//
-//func deleteData(db *sql.DB) {
-//    query := `DELETE FROM users WHERE name = ?`
-//    _, err := db.Exec(query, "Alice")
-//    if err != nil {
-//        log.Fatal(err)
-//    fmt.Println("Data deleted successfully!")
-//}
-
 type Session struct {
 	ID                string
 	UserID            int
@@ -244,7 +210,6 @@ type Session struct {
   Searching         bool
 }
 
-// user_id INTEGER,
 func CreateSessionsTable(db *sql.DB) {
   query := `
     CREATE TABLE IF NOT EXISTS sessions (
@@ -361,16 +326,16 @@ func GetSession(db *sql.DB, sessionID string) (Session, error) {
 
 type Cart struct{
   SessionId   string
-  ProductId   int
+  ProductId   string
 }
 
 func CreateCartTable(db *sql.DB) {
 
   query := `
     CREATE TABLE IF NOT EXISTS cart (
-      CartId INTEGER PRIMARY KEY AUTOINCREMENT,
+      CartId TEXT PRIMARY KEY,
       SessionId TEXT,
-      ProductId INTEGER,
+      ProductId TEXT,
       Quantity INTEGER DEFAULT 1,
       FOREIGN KEY (SessionId) REFERENCES sessions(id),
       FOREIGN KEY (ProductId) REFERENCES products(id),
@@ -383,97 +348,102 @@ func CreateCartTable(db *sql.DB) {
   }
   fmt.Println("Cart Table created successfully!")
 }
+func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
+    var rowData []m.CartItem
 
-func SelectCart(db *sql.DB, sessionID string) ([]m.Product, error) {
-
-  var rowData []m.Product
-
-  query := `SELECT 
-    c.cartId,
-    p.name,
-    p.price,
-    c.quantity,
-    (p.price * c.quantity) AS total
-    FROM cart c
-    JOIN products p ON c.ProductId = p.id
-    WHERE c.SessionId = ?`
+    query := `SELECT 
+        c.cartId,
+        c.ProductId,
+        p.name,
+        p.price,
+        c.quantity,
+        (p.price * c.quantity) AS total
+        FROM cart c
+        JOIN products p ON c.ProductId = p.id
+        WHERE c.SessionId = ?`
 
     rows, err := db.Query(query, sessionID)
     if err != nil {
-      log.Fatal(err)
+        return nil, err
     }
-    //var product Product
-    var cartId int
+    defer rows.Close()
+
+    var cartId string
+    var productId string
     var name string
     var price int
     var quantity int
     var total int
 
     for rows.Next() {
-      err := rows.Scan(&cartId, &name, &price, &quantity, &total)
-      if err != nil {
-          log.Fatal(err)
-      }
-      
-      println("adding:")
-      println(name)
-      rowData = append(rowData, m.Product{Id: cartId, Name: name, Price: price, Quantity: quantity})
-      println(rowData[0].Price)
+        err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &total)
+        if err != nil {
+            return nil, err
+        }
+
+        rowData = append(rowData, 
+            m.CartItem{
+                Product: m.Product{Id: productId, Name: name, Price: price, Quantity: quantity}, 
+                CartID: cartId,
+            })
     }
 
-    defer rows.Close()
-  return rowData,nil
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return rowData, nil
 }
 
-func SelectCartItem(db *sql.DB, productId int) (m.Product, error) {
+func SelectCartItem(db *sql.DB, productId string) (m.CartItem, error) {
+    var product m.CartItem
 
-  var product m.Product
+    query := `SELECT 
+        c.cartId,
+        p.name,
+        p.price,
+        c.quantity,
+        (p.price * c.quantity) AS total
+        FROM cart c
+        JOIN products p ON c.ProductId = p.id
+        WHERE c.ProductId = ?`
 
-  query := `SELECT 
-    c.cartId,
-    p.name,
-    p.price,
-    c.quantity,
-    (p.price * c.quantity) AS total
-    FROM cart c
-    JOIN products p ON c.ProductId = p.id
-    WHERE c.ProductId = ?
-    `
+    row := db.QueryRow(query, productId)
 
-    row, err := db.Query(query, productId)
-    if err != nil {
-      log.Fatal(err)
-    }
-    //var product Product
-    var cartId int
+    var cartId string
     var name string
     var price int
     var quantity int
     var total int
 
-    for row.Next() {
-      err := row.Scan(&cartId, &name, &price, &quantity, &total)
-      if err != nil {
-          log.Fatal(err)
-      }
-      
-      product = m.Product{Id: cartId, Name: name, Price: price, Quantity: quantity}
+    err := row.Scan(&cartId, &name, &price, &quantity, &total)
+    if err != nil {
+        return product, err
     }
 
-    defer row.Close()
-  return product,nil
+    product.Product = m.Product{Id: productId, Name: name, Price: price, Quantity: quantity}
+    product.CartID = cartId
+
+    return product, nil
 }
 
-
-func AddToCart(db *sql.DB, SessionId string, ProductId int){
+func AddToCart(db *sql.DB, SessionId string, ProductId string){
 
   query := `INSERT INTO cart
-    (SessionId, ProductId, Quantity)
-    VALUES (?, ?, 1)
+    (CartId, SessionId, ProductId, Quantity)
+    VALUES (?, ?, ?, 1)
     ON CONFLICT(SessionId, ProductId) DO UPDATE SET
     Quantity = Quantity + 1;`
 
-	_, err := db.Exec(query, SessionId, ProductId)
+
+  uniqueCartID := uuid.New().String()
+
+  println("!!!!!!!!!!!!!!!!! ADD TO CART !!!!!!!!!!!!!!!!!")
+  println(uniqueCartID)
+  println(SessionId)
+  println(ProductId)
+
+	_, err := db.Exec(query, uniqueCartID, SessionId, ProductId)
   if err != nil {
     log.Fatal(err)
   }
@@ -481,7 +451,7 @@ func AddToCart(db *sql.DB, SessionId string, ProductId int){
 
 }
 
-func DeleteFromCart(db *sql.DB, cartId int){
+func DeleteFromCart(db *sql.DB, cartId string){
 
   query := `DELETE FROM cart WHERE CartId = ?`
 

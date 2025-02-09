@@ -1,11 +1,16 @@
 package misc
 
 type Product struct {
-  Id int
+  Id string
   Name string
   Price int
   Desc string
   Quantity int
+}
+
+type CartItem struct{
+  Product Product
+  CartID  string
 }
 
 type Session struct {
@@ -21,7 +26,7 @@ type ProductNumsElement struct{
   SearchTerm string
 }
 
-func NewProduct(id int, name string, price int, desc string, quantity int) Product{
+func NewProduct(id string, name string, price int, desc string, quantity int) Product{
   return Product{
     Id: id,
     Name: name,

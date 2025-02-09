@@ -56,7 +56,7 @@ func NewCartItems(productsList ProductsList) CartItems{
 }
 
 type CurrentCart struct{
-  ProductsList ProductsList
+  CartList []m.CartItem
 }
 
 func CreateCurentCart(sqldb *sql.DB, token string) CurrentCart{
@@ -64,7 +64,7 @@ func CreateCurentCart(sqldb *sql.DB, token string) CurrentCart{
   items,_ := db.SelectCart(sqldb, token)
 
   return CurrentCart{
-    ProductsList: items,
+    CartList: items,
   }
 }
 
