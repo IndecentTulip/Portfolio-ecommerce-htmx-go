@@ -11,6 +11,7 @@ type Product struct {
 type CartItem struct{
   Product Product
   CartID  string
+  Total   int
 }
 
 type Session struct {

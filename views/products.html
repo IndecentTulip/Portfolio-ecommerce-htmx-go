@@ -1,5 +1,4 @@
-<!--
-PageContext
+<!-- PageContext
   >
   Start
   Next 
@@ -56,16 +55,18 @@ ProductsList
     Desc
 -->
 {{ block "product" . }}
-<div class="Product" id="product-{{ .Id }}">
+<div class="Product"
+  id="product-{{ .Id }}"
+>
   <hr />
   <p>Prod Name: {{ .Name }}</p>
   <p>Description: {{ .Desc }}</p>
   <p>Price: {{ .Price}}</p>
   <p>Stock: {{ .Quantity}}</p>
+  <a href="/p/{{ .Id }}/"> more</a>
   <button 
-    hx-put="/addtocart"
+    hx-put="/addtocart?id={{.Id}}"
     hx-trigger="click"
-    hx-vals='{"id": {{ .Id }} }'
     hx-swap="none"
     hx-target="#product-{{ .Id }}"
   > Add to the cart</button>

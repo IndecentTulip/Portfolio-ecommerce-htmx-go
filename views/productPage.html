@@ -1,0 +1,37 @@
+{{ block "productPage" . }}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
+    <link href="css/style.css" rel="stylesheet">
+  </head>
+  <!--
+  type Product struct {
+    Id string
+    Name string
+    Price int
+    Desc string
+    Quantity int
+  }
+  -->
+  <body id="body">
+    {{ template "navbar" . }}
+    {{ template "cart" .SessionContext }}
+    <h1>{{ .SessionContext }}</h1>
+
+    <div id="test">test</div>
+    <div>{{ .Product.Id }}</div>
+    <div>{{ .Product.Desc }}</div>
+    <div>{{ .Product.Price }}</div>
+  <button 
+    hx-put="/addtocart?id={{ .Product.Id}}"
+    hx-trigger="click"
+    hx-swap="none"
+  > Add to the cart</button>
+    <div> you can add tags, ability to choose color if possible, etc</div>
+  </body>
+</html>
+{{ end }}

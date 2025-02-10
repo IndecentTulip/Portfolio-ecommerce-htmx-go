@@ -62,6 +62,10 @@ type CurrentCart struct{
 func CreateCurentCart(sqldb *sql.DB, token string) CurrentCart{
 
   items,_ := db.SelectCart(sqldb, token)
+  println("CART CREATION!!!!!!!!!!")
+  println(token)
+  println(items)
+  println("CART CREATION!!!!!!!!!!")
 
   return CurrentCart{
     CartList: items,

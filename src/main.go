@@ -13,6 +13,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -237,6 +238,26 @@ func main(){
     return c.Render(200, "cartitems-oob", sendContext)
   });
 
+  e.PUT("/addtocart/page", func(c echo.Context) error {
+
+    productID := c.QueryParam("id")
+    println("!!!! API /addtocart !!!!")
+    println(productID)
+    sessionID := c.Request().Header.Get("Cookie")
+    if sessionID == ""{
+    }else{
+      sessionID = strings.Replace(sessionID, "session=", "",1)
+    }
+
+    db.AddToCart(sqldb,sessionID,productID)
+
+    var sendContext any
+
+    return c.Render(200, "temp", sendContext)
+  });
+
+
+
   e.DELETE("/removefromcart", func(c echo.Context) error {
     productID := c.QueryParam("id")
 
@@ -258,6 +279,7 @@ func main(){
     if erro != nil{
       newSearch = 0
     }
+
 
     //<><>
     searchTerm := c.QueryParam("search")
@@ -353,15 +375,93 @@ func main(){
 
   });
 
-  e.GET("/c/:cart_id", func(c echo.Context) error {
+  e.GET("/p/:product_id", func(c echo.Context) error {
 
-    cartID := c.Param("cart_id")
-    println(cartID)
+    productId := c.Param("product_id")
+    println("VISITING PRODUCT")
+    println(productId)
+
+    type WebContext struct{
+      Product m.Product
+      SessionContext wc.SessionContext
+    }
+    println("TEST")
+    product :=  db.GetProduct(sqldb,productId)
+    //session := wc.NewSessionContext(sqldb, sessionID, 0)
+
+    webContext := WebContext{
+      Product: product,
+ //     SessionContext: session,
+    }
+
+    return c.Render(200,"productPage", webContext)
+  });
+
+  e.GET("/c/:session_id", func(c echo.Context) error {
+
+    sessionID := c.Param("session_id")
+    println("BYING")
+    println(sessionID)
+
+    cartInfo,_ := db.SelectCart(sqldb,sessionID)
+    finalPrice := db.CountFinalPrice(cartInfo)
+
+    type CartPage struct{
+      CartInfo []m.CartItem
+      FinalPrice int
+    }
+
+    cartContext := CartPage{
+      CartInfo: cartInfo,
+      FinalPrice: finalPrice,
+    } 
+
+    return c.Render(200,"cartPage", cartContext)
+  });
+
+  e.PUT("/payment", func(c echo.Context) error {
+
+    cardnumber := c.FormValue("cardNumber")
+
+    println("!!!!!!!!!!!!!!!!!!!")
+    println(cardnumber)
+    println("!!!!!!!!!!!!!!!!!!!")
+
+    //stripe.Key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
+    //var paymentData struct {
+    //    Amount int64  `json:"amount"`
+    //    Token  string `json:"token"` // Token from the frontend
+    //}
+    //err := json.NewDecoder(r.Body).Decode(&paymentData)
+    //if err != nil {
+    //    http.Error(w, "Invalid data", http.StatusBadRequest)
+    //    return
+    //}
+    //
+    //// Create a payment intent with Stripe
+    //pi, err := paymentintent.New(&stripe.PaymentIntentParams{
+    //    Amount:   stripe.Int64(paymentData.Amount),
+    //    Currency: stripe.String(string(stripe.CurrencyUSD)),
+    //    PaymentMethod: stripe.String(paymentData.Token),
+    //    ConfirmationMethod: stripe.String(string(stripe.PaymentIntentConfirmationMethodManual)),
+    //    Confirm: stripe.Bool(true),
+    //})
+    //
+    //if err != nil {
+    //    http.Error(w, "Payment processing error", http.StatusInternalServerError)
+    //    return
+    //}
+    //
+    //// Return the payment intent result
+    //response := map[string]interface{}{
+    //    "success": pi.Status == stripe.PaymentIntentStatusSucceeded,
+    //}
 
     var sendContext any
 
-    return c.Render(404,"index", sendContext)
+    return c.Render(200,"restartpage", sendContext)
   });
+
 
 
 

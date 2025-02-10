@@ -385,6 +385,7 @@ func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
             m.CartItem{
                 Product: m.Product{Id: productId, Name: name, Price: price, Quantity: quantity}, 
                 CartID: cartId,
+                Total: total,
             })
     }
 
@@ -394,6 +395,17 @@ func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
 
     return rowData, nil
 }
+func CountFinalPrice(cartItemsList []m.CartItem) (int) {
+
+  var finalTotal int
+  for _,item := range cartItemsList{
+    finalTotal += item.Total
+  }
+
+  return finalTotal 
+}
+
+
 
 func SelectCartItem(db *sql.DB, productId string) (m.CartItem, error) {
     var product m.CartItem
