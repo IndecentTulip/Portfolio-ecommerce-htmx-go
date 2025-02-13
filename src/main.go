@@ -17,7 +17,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool, searchTerm string) []m.ProductNumsElement {
+func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool, searchTerm string) []int {
   const ITEMS_PER_PAGE = 20
   // MAKE IT NOT ONLY FOR SEARCH
   var currentOffset int
@@ -108,7 +108,7 @@ func main(){
     println(start)
     println(newStart)
     
-    var nextProductsNums []m.ProductNumsElement 
+    var nextProductsNums []int
     if !(start > range_start){
       searchTerm := ""
       nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false,searchTerm)
@@ -136,23 +136,19 @@ func main(){
       NextProductsNums: nextProductsNums,
     }
 
-    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1, productList, false,"")
+    webContext := m.NewGlobalContext(sqldb, values, sessionID, page+1, productList, false,"")
 
-    var sendContext interface{}
-
-    sendContext = webContext.PageContext
 
     template := "products"
     if loadIndex {
       template = "index"
-      sendContext = webContext
     }
 
     if !page_range{
       template = "none"
     }
 
-    return c.Render(200, template, sendContext)
+    return c.Render(200, template, webContext)
   });
 
 
@@ -217,7 +213,7 @@ func main(){
 
     productInfo,_ := db.SelectCartItem(sqldb,productID)
 
-    type CartItem = m.CartItem
+    type CartItem = wc.CartItem
 
     type oobProduct struct{
       CartItem CartItem
@@ -310,9 +306,9 @@ func main(){
 
 
 
-    var nextProductsNums []m.ProductNumsElement 
+    var nextProductsNums []int 
     if !(start > range_start){
-      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false, searchTerm)
+      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,true, searchTerm)
     }
 
     println("FOR SEARCH ranges")
@@ -355,34 +351,32 @@ func main(){
       NextProductsNums: nextProductsNums,
     }
 
-    webContext := wc.NewGlobalContext(sqldb, values, sessionID, page+1,productList, true, searchTerm)
-
-    var sendContext any
-
-    sendContext = webContext.PageContext
+    webContext := m.NewGlobalContext(sqldb, values, sessionID, page+1,productList, true, searchTerm)
 
     template := "products"
     if loadIndex {
       template = "index"
-      sendContext = webContext
     }
 
     if !page_range{
       template = "none"
     }
 
-    return c.Render(200, template, sendContext)
+    return c.Render(200, template, webContext)
 
   });
 
   e.GET("/p/:product_id", func(c echo.Context) error {
 
     productId := c.Param("product_id")
+    sessionID := c.Request().Header.Get("Cookie")
+    sessionID = strings.Replace(sessionID, "session=", "",1)
     println("VISITING PRODUCT")
     println(productId)
+    println(sessionID)
 
     type WebContext struct{
-      Product m.Product
+      Product wc.Product
       SessionContext wc.SessionContext
     }
     println("TEST")
@@ -407,7 +401,7 @@ func main(){
     finalPrice := db.CountFinalPrice(cartInfo)
 
     type CartPage struct{
-      CartInfo []m.CartItem
+      CartInfo []wc.CartItem
       FinalPrice int
     }
 

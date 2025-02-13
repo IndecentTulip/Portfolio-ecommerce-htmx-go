@@ -1,34 +1,45 @@
 package misc
 
-type Product struct {
-  Id string
-  Name string
-  Price int
-  Desc string
-  Quantity int
+import (
+  wc "htmxNpython/web_context"
+	"database/sql"
+	db "htmxNpython/db_creation"
+)
+
+func NewPageContext(sqldb *sql.DB, values wc.InfiniteScroll, productList []wc.Product, isSearching bool, term string) wc.PageContext{
+  return wc.PageContext{
+    ProductsList: productList,
+    Searching: isSearching,
+    SearchTerm: term,
+    Next: values.NewStart,
+    More: values.More,
+    NextProductsNums: values.NextProductsNums,
+  }
 }
 
-type CartItem struct{
-  Product Product
-  CartID  string
-  Total   int
+func CreateCurentCart(sqldb *sql.DB, token string) wc.CurrentCart{
+
+  items,_ := db.SelectCart(sqldb, token)
+  println("CART CREATION!!!!!!!!!!")
+  println(token)
+  println(items)
+  println("CART CREATION!!!!!!!!!!")
+
+  return wc.CurrentCart{
+    CartList: items,
+  }
 }
 
-type Session struct {
-	ID                string
-	UserID            int
-	CreatedAt         int64
-	CurrentPage       int64
-  CurrentPageSearch int64
+func NewSessionContext(db *sql.DB, token string, num int) wc.SessionContext{
+  return wc.SessionContext{
+    SessionID: token,
+    CurrentPage: num,
+    CurrentCart: CreateCurentCart(db, token),
+  }
 }
 
-type ProductNumsElement struct{   
-  Num int
-  SearchTerm string
-}
-
-func NewProduct(id string, name string, price int, desc string, quantity int) Product{
-  return Product{
+func NewProduct(id string, name string, price int, desc string, quantity int) wc.Product{
+  return wc.Product{
     Id: id,
     Name: name,
     Price: price,
@@ -36,15 +47,21 @@ func NewProduct(id string, name string, price int, desc string, quantity int) Pr
     Quantity: quantity,
   }
 }
+func NewGlobalContext(sqldb *sql.DB, values wc.InfiniteScroll, token string, pagenum int, productsList []wc.Product, isSearching bool,term string) wc.GlobalContext{
+  return wc.GlobalContext{
+    PageContext: NewPageContext(sqldb, values, productsList, isSearching, term),
+    SessionContext: NewSessionContext(sqldb, token, pagenum),
+  } 
+}
 
-func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int, searchTerm string) []ProductNumsElement {
+func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int, searchTerm string) []int {
     totalPages := (totalProducts + itemsPerPage - 1) / itemsPerPage
     currentPage := currentOffset / itemsPerPage
     
-    var values []ProductNumsElement
+    var values []int
     
     // Always show first page
-    first_page := ProductNumsElement{Num: 0, SearchTerm: searchTerm}
+    first_page := 0
     values = append(values, first_page)
 
     // Calculate window of pages around current
@@ -53,18 +70,17 @@ func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts 
 
     // Add pages in window
     for page := startPage; page <= endPage; page++ {
-        temp := ProductNumsElement{Num: page*itemsPerPage, SearchTerm: searchTerm}
-        values = append(values, temp)
+        values = append(values, page*itemsPerPage)
     }
 
     // Always show last page if not already included
     if endPage < totalPages-1 {
-        temp := ProductNumsElement{Num: (totalPages-1)*itemsPerPage, SearchTerm: searchTerm}
-        values = append(values, temp)
+        values = append(values, (totalPages-1)*itemsPerPage)
     }
 
     return unique(values)
 }
+
 
 func max(a, b int) int {
     if a > b {
@@ -80,11 +96,11 @@ func min(a, b int) int {
     return b
 }
 
-func unique(input []ProductNumsElement) []ProductNumsElement {
+func unique(input []int) []int {
     seen := make(map[int]bool)
-    result := []ProductNumsElement{}
+    result := []int{}
     for _, val := range input {
-        checkVal := val.Num
+        checkVal := val
         if !seen[checkVal] {
             seen[checkVal] = true
             result = append(result, val)

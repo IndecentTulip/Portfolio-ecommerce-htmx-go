@@ -18,9 +18,8 @@
   }
   -->
   <body id="body">
-    {{ template "navbar" . }}
-    {{ template "cart" .SessionContext }}
-    <h1>{{ .SessionContext }}</h1>
+    <!--h1>{{ .SessionContext }}</h1>
+--><
 
     <div id="test">test</div>
     <div>{{ .Product.Id }}</div>
@@ -33,5 +32,10 @@
   > Add to the cart</button>
     <div> you can add tags, ability to choose color if possible, etc</div>
   </body>
+  <script>
+    window.onload = function() {
+      alert("token: " + document.cookie);
+    }
+  </script>
 </html>
 {{ end }}

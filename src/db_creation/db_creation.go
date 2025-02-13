@@ -9,7 +9,7 @@ import (
 	"time"
   "github.com/google/uuid"
 
-	m "htmxNpython/misc"
+	wc "htmxNpython/web_context"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -64,7 +64,7 @@ func insertIntoProducts(db *sql.DB) {
   fmt.Println("Data inserted successfully!")
 }
 
-func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
+func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
   query := `
       SELECT
       COUNT(*) OVER() AS total,
@@ -73,7 +73,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
       LIMIT 10
       OFFSET ?`
       
-  var ProductList []m.Product
+  var ProductList []wc.Product
 
   rows, err := db.Query(query, offset)
   if err != nil {
@@ -96,7 +96,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
     println("product list: adding:")
     println(id)
     println(name)
-    ProductList = append(ProductList, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+    ProductList = append(ProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
   }
   println("product list total:")
   println(total)
@@ -109,10 +109,10 @@ func GetProductsList(db *sql.DB,  offset int) ([]m.Product, int) {
 
 
 
-func GetProduct(db *sql.DB, prodId string) m.Product {
+func GetProduct(db *sql.DB, prodId string) wc.Product {
   query := `SELECT id, name, price, desc, quantity FROM products WHERE id = ?`
 
-  var product m.Product
+  var product wc.Product
 
   rows, err := db.Query(query, prodId)
   if err != nil {
@@ -131,7 +131,7 @@ func GetProduct(db *sql.DB, prodId string) m.Product {
         log.Fatal(err)
     }
     
-    product = m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity}
+    product = wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity}
   }
 
     defer rows.Close()
@@ -140,7 +140,7 @@ func GetProduct(db *sql.DB, prodId string) m.Product {
 
 }
 
-func GetProductSearch(db *sql.DB, term string, offset int) ([]m.Product, int) {
+func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
   terms := strings.Split(term, " ")
   query := `
       SELECT
@@ -160,7 +160,7 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]m.Product, int) {
   }
   params = append(params, offset)
 
-  var searchProductList []m.Product
+  var searchProductList []wc.Product
 
   rows, err := db.Query(query, params...)
   if err != nil {
@@ -182,7 +182,7 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]m.Product, int) {
     
     println("search: adding:")
     println(name)
-    searchProductList = append(searchProductList, m.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+    searchProductList = append(searchProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
   }
   println("search total:")
   println(total)
@@ -348,8 +348,8 @@ func CreateCartTable(db *sql.DB) {
   }
   fmt.Println("Cart Table created successfully!")
 }
-func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
-    var rowData []m.CartItem
+func SelectCart(db *sql.DB, sessionID string) ([]wc.CartItem, error) {
+    var rowData []wc.CartItem
 
     query := `SELECT 
         c.cartId,
@@ -382,8 +382,8 @@ func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
         }
 
         rowData = append(rowData, 
-            m.CartItem{
-                Product: m.Product{Id: productId, Name: name, Price: price, Quantity: quantity}, 
+            wc.CartItem{
+                Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity}, 
                 CartID: cartId,
                 Total: total,
             })
@@ -395,7 +395,7 @@ func SelectCart(db *sql.DB, sessionID string) ([]m.CartItem, error) {
 
     return rowData, nil
 }
-func CountFinalPrice(cartItemsList []m.CartItem) (int) {
+func CountFinalPrice(cartItemsList []wc.CartItem) (int) {
 
   var finalTotal int
   for _,item := range cartItemsList{
@@ -407,8 +407,8 @@ func CountFinalPrice(cartItemsList []m.CartItem) (int) {
 
 
 
-func SelectCartItem(db *sql.DB, productId string) (m.CartItem, error) {
-    var product m.CartItem
+func SelectCartItem(db *sql.DB, productId string) (wc.CartItem, error) {
+    var product wc.CartItem
 
     query := `SELECT 
         c.cartId,
@@ -433,7 +433,7 @@ func SelectCartItem(db *sql.DB, productId string) (m.CartItem, error) {
         return product, err
     }
 
-    product.Product = m.Product{Id: productId, Name: name, Price: price, Quantity: quantity}
+    product.Product = wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity}
     product.CartID = cartId
 
     return product, nil

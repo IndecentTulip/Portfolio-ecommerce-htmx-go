@@ -15,23 +15,23 @@
 -->
 {{ block "products" . }}
 
-  {{ range .ProductsList }}
+  {{ range .PageContext.ProductsList }}
     {{ template "product" . }}
   {{ end }}
 
-  {{ if .More }}
-    {{ if .Searching}}
+  {{ if .PageContext.More }}
+    {{ if .PageContext.Searching}}
       <div 
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
-        hx-get="/search?start={{ .Next }}&search={{ .SearchTerm }}"
+        hx-get="/search?start={{ .PageContext.Next }}&search={{ .PageContext.SearchTerm }}"
       ></div>
 
     {{ else }}
       <div 
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
-        hx-get="/?start={{ .Next }}"
+        hx-get="/?start={{ .PageContext.Next }}"
       ></div>
     {{ end }}
 
@@ -39,7 +39,7 @@
   {{ end }}
  
   <div id="nextpage">
-    {{ template "nextpage" .}}
+    {{ template "nextpage" .PageContext}}
   </div>
 
 </div>
@@ -63,7 +63,7 @@ ProductsList
   <p>Description: {{ .Desc }}</p>
   <p>Price: {{ .Price}}</p>
   <p>Stock: {{ .Quantity}}</p>
-  <a href="/p/{{ .Id }}/"> more</a>
+  <a href="/p/{{ .Id }}"> more</a>
   <button 
     hx-put="/addtocart?id={{.Id}}"
     hx-trigger="click"
