@@ -6,30 +6,8 @@ import (
 	db "htmxNpython/db_creation"
 )
 
-func NewPageContext(sqldb *sql.DB, values wc.InfiniteScroll, productList []wc.Product, isSearching bool, term string) wc.PageContext{
-  return wc.PageContext{
-    ProductsList: productList,
-    Searching: isSearching,
-    SearchTerm: term,
-    Next: values.NewStart,
-    More: values.More,
-    NextProductsNums: values.NextProductsNums,
-  }
-}
 
-func CreateCurentCart(sqldb *sql.DB, token string) wc.CurrentCart{
-
-  items,_ := db.SelectCart(sqldb, token)
-  println("CART CREATION!!!!!!!!!!")
-  println(token)
-  println(items)
-  println("CART CREATION!!!!!!!!!!")
-
-  return wc.CurrentCart{
-    CartList: items,
-  }
-}
-func CreateCurentCart_test(sqldb *sql.DB, token string) []wc.CartItem{
+func CreateCurentCart(sqldb *sql.DB, token string) []wc.CartItem{
 
   items,_ := db.SelectCart(sqldb, token)
   println("CART CREATION!!!!!!!!!!")
@@ -40,33 +18,8 @@ func CreateCurentCart_test(sqldb *sql.DB, token string) []wc.CartItem{
   return items
 }
 
-
-
-func NewSessionContext(db *sql.DB, token string, num int) wc.SessionContext{
-  return wc.SessionContext{
-    SessionID: token,
-    CurrentPage: num,
-    CurrentCart: CreateCurentCart(db, token),
-  }
-}
-
-func NewProduct(id string, name string, price int, desc string, quantity int) wc.Product{
-  return wc.Product{
-    Id: id,
-    Name: name,
-    Price: price,
-    Desc: desc,
-    Quantity: quantity,
-  }
-}
-func NewGlobalContext(sqldb *sql.DB, values wc.InfiniteScroll, token string, pagenum int, productsList []wc.Product, isSearching bool,term string) wc.GlobalContext{
-  return wc.GlobalContext{
-    PageContext: NewPageContext(sqldb, values, productsList, isSearching, term),
-    SessionContext: NewSessionContext(sqldb, token, pagenum),
-  } 
-}
-func NewGlobalContext_test(sqldb *sql.DB, session wc.Session_Test, page wc.PageContext_test, stripNums []int, productsList []wc.Product) wc.GlobalContext_Test{
-  return wc.GenerateGlobalContext(session, page, productsList, stripNums, CreateCurentCart_test(sqldb,session.SessionID)) 
+func NewGlobalContext_test(sqldb *sql.DB, session wc.SessionContext, page wc.PageContext, stripNums []int, productsList []wc.Product) wc.GlobalContext{
+  return wc.GenerateGlobalContext(session, page, productsList, stripNums, CreateCurentCart(sqldb,session.SessionID)) 
 }
 
 func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int, searchTerm string) []int {

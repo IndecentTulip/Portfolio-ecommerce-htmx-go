@@ -131,11 +131,11 @@ func main(){
 
     fmt.Println(more)
 
-    ses := wc.Session_Test{
+    ses := wc.SessionContext{
       SessionID: sessionID,
       CurrentPage: page+1,
     }
-    pag := wc.PageContext_test{
+    pag := wc.PageContext{
       Next: newStart,
       More: more,
       Is_Searching: false,
@@ -347,11 +347,11 @@ func main(){
 
     fmt.Println(more)
 
-    ses := wc.Session_Test{
+    ses := wc.SessionContext{
       SessionID: sessionID,
       CurrentPage: page+1,
     }
-    pag := wc.PageContext_test{
+    pag := wc.PageContext{
       Next: newStart,
       More: more,
       Is_Searching: true,

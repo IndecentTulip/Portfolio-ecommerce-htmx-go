@@ -9,7 +9,6 @@ type Product struct {
   Desc string
   Quantity int
 }
-
 type CartItem struct{
   Product Product
   CartID  string
@@ -17,55 +16,26 @@ type CartItem struct{
 }
 
 type PageContext struct{
-  ProductsList []Product
-  Next int
-  More bool
-  Searching bool
-  SearchTerm string
-  NextProductsNums []int
-}
-
-// used to set values
-type InfiniteScroll struct {
-  NewStart int
-  More bool
-  NextProductsNums []int
-}
-
-type CurrentCart struct{
-  CartList []CartItem
-}
-type PageContext_test struct{
   Next int
   More bool
   SearchTerm string
-}
-type Session_Test struct {
-  SessionID string
-  CurrentPage int
+  Is_Searching bool
 }
 
-type SessionContext struct{
+type SessionContext struct {
   SessionID string
   CurrentPage int
-  CurrentPageSearch int
-  CurrentCart CurrentCart 
 }
 
 type GlobalContext struct {
-  PageContext PageContext
-  SessionContext SessionContext
-}
-
-type GlobalContext_Test struct {
 	Values       map[string]interface{}
   ProductsList []Product
   NextProductsNums []int
   CartList      []CartItem
 }
 
-func GenerateGlobalContext(session Session_Test, page PageContext_test, productList []Product, strip []int, cartList []CartItem ) GlobalContext_Test {
-  context := GlobalContext_Test{
+func GenerateGlobalContext(session SessionContext, page PageContext, productList []Product, strip []int, cartList []CartItem ) GlobalContext {
+  context := GlobalContext{
     ProductsList: productList,
     NextProductsNums: strip,
     CartList: cartList,
