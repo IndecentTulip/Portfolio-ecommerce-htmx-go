@@ -18,19 +18,6 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func GetNextProductNums(sessionInfo db.Session, totalProducts int, isSearch bool, searchTerm string) []int {
-  const ITEMS_PER_PAGE = 20
-  // MAKE IT NOT ONLY FOR SEARCH
-  var currentOffset int
-  if isSearch {
-    currentOffset = (int(sessionInfo.CurrentPageSearch) - 1) * ITEMS_PER_PAGE
-  }else{
-    currentOffset = (int(sessionInfo.CurrentPage) - 1) * ITEMS_PER_PAGE
-  }
-  
-  return m.GenerateNextProductNums(currentOffset, ITEMS_PER_PAGE, totalProducts, searchTerm)
-}
-
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
   sessionID := c.Request().Header.Get("Cookie")
   if sessionID == ""{
@@ -63,12 +50,12 @@ func main(){
   e.Static("/static/images", "images")
   e.Static("/static/css", "css")
 
-  ITEMS_PER_PAGE := 20
+  const ITEMS_PER_PAGE = 20
 
   e.GET("/", func(c echo.Context) error {
-    // <><> session related <><>
+
     sessionID := handleSessionWithoutAcc(sqldb,c)
-    //<><>
+    
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
@@ -89,33 +76,15 @@ func main(){
     if err != nil {
       start = range_start 
     }
-    fmt.Println("FOR / ranges")
-    fmt.Println(page)
-    fmt.Println(range_start)
-    fmt.Println(range_end)
 
     page_range := start >= range_start && start <= range_end  
 
-    fmt.Println(page_range)
-
-    // <><>
     var newStart = start + (ITEMS_PER_PAGE/2)
 
-    productList,PRODUCTNUM := db.GetProductsList(sqldb,start)
+    _,PRODUCTNUM := db.GetProductsList(sqldb,start)
 
     var more = newStart <= PRODUCTNUM
   
-    fmt.Println("FOR / starts")
-    fmt.Println(start)
-    fmt.Println(newStart)
-    
-    var nextProductsNums []int
-    if !(start > range_start){
-      searchTerm := ""
-      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,false,searchTerm)
-    }
-
-    // <><><>
     loadIndex := false
     if start == range_start {
       loadIndex = true
@@ -124,12 +93,6 @@ func main(){
     if newStart > range_end{
       more = false
     } 
-    // <><><>
-
-    fmt.Println(sessionID)
-    fmt.Println(page_range)
-
-    fmt.Println(more)
 
     ses := wc.SessionContext{
       SessionID: sessionID,
@@ -141,7 +104,84 @@ func main(){
       Is_Searching: false,
       SearchTerm: "",
     }
-    webContext := m.NewGlobalContext_test(sqldb,ses,pag,nextProductsNums,productList)
+    webContext := m.NewGlobalContext(sqldb,ses,pag)
+
+    template := "products"
+    if loadIndex {
+      template = "index"
+    }
+    if !page_range{
+      template = "none"
+    }
+
+    return c.Render(200, template, webContext)
+  });
+
+  e.GET("/search", func(c echo.Context) error {
+    sessionID := handleSessionWithoutAcc(sqldb,c)
+
+    startStr := c.QueryParam("start")
+    start, err := strconv.Atoi(startStr)
+
+    newSearchStr := c.QueryParam("newSearch")
+    newSearch,erro := strconv.Atoi(newSearchStr)
+    if erro != nil{
+      newSearch = 0
+    }
+
+    //<><>
+    searchTerm := c.QueryParam("search")
+    fmt.Println(searchTerm)
+    searchTerm = strings.TrimSpace(searchTerm)  // Remove whitespace
+    searchTerm = html.EscapeString(searchTerm) // Prevent XSS
+
+    if searchTerm != ""{
+      db.UpdateSearchingStatus(sqldb, sessionID, true)
+    }else{
+      db.UpdateSearchingStatus(sqldb,sessionID,false)
+    }
+
+    sessionInfo,_ := db.GetSession(sqldb,sessionID)
+
+    page := int(int(sessionInfo.CurrentPageSearch) - 1)
+
+    range_start := page * ITEMS_PER_PAGE
+    range_end := range_start + (ITEMS_PER_PAGE/2)
+
+    if err != nil {
+      start = range_start 
+    }
+
+    _,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
+
+    page_range := start >= range_start && start <= range_end  
+
+    fmt.Println(page_range)
+
+    var newStart = start + (ITEMS_PER_PAGE/2)
+    var more = newStart <= PRODUCTNUM
+
+    loadIndex := false
+    if (start == range_start) && newSearch != 1 {
+      loadIndex = true
+    }
+
+    if newStart > range_end{
+      more = false
+    } 
+
+    ses := wc.SessionContext{
+      SessionID: sessionID,
+      CurrentPage: page+1,
+    }
+    pag := wc.PageContext{
+      Next: newStart,
+      More: more,
+      Is_Searching: true,
+      SearchTerm: searchTerm,
+    }
+
+    webContext := m.NewGlobalContext(sqldb,ses,pag)
 
     template := "products"
     if loadIndex {
@@ -153,7 +193,10 @@ func main(){
     }
 
     return c.Render(200, template, webContext)
+
   });
+
+
 
 
   e.PUT("/tabnum", func(c echo.Context) error {
@@ -255,7 +298,6 @@ func main(){
   });
 
 
-
   e.DELETE("/removefromcart", func(c echo.Context) error {
     productID := c.QueryParam("id")
 
@@ -264,113 +306,6 @@ func main(){
     var sendContext any
 
     return c.Render(200, "temp", sendContext)
-  });
-
-  e.GET("/search", func(c echo.Context) error {
-    sessionID := handleSessionWithoutAcc(sqldb,c)
-
-    startStr := c.QueryParam("start")
-    start, err := strconv.Atoi(startStr)
-
-    newSearchStr := c.QueryParam("newSearch")
-    newSearch,erro := strconv.Atoi(newSearchStr)
-    if erro != nil{
-      newSearch = 0
-    }
-
-
-    //<><>
-    searchTerm := c.QueryParam("search")
-    fmt.Println(searchTerm)
-    searchTerm = strings.TrimSpace(searchTerm)  // Remove whitespace
-    searchTerm = html.EscapeString(searchTerm) // Prevent XSS
-
-    if searchTerm != ""{
-      db.UpdateSearchingStatus(sqldb, sessionID, true)
-    }else{
-      db.UpdateSearchingStatus(sqldb,sessionID,false)
-    }
-
-    sessionInfo,_ := db.GetSession(sqldb,sessionID)
-    // page is needed to understand if you need to lazy load more content
-    page := int(int(sessionInfo.CurrentPageSearch) - 1)
-
-    range_start := page * ITEMS_PER_PAGE
-    range_end := range_start + (ITEMS_PER_PAGE/2)
-
-    // start is needed to understand what is the current OFFSET for the SELECT query is 
-    if err != nil {
-      start = range_start 
-    }
-
-    productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
-    fmt.Println(PRODUCTNUM)
-
-
-
-    var nextProductsNums []int 
-    if !(start > range_start){
-      nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,true, searchTerm)
-    }
-
-    fmt.Println("FOR SEARCH ranges")
-    fmt.Println(page)
-    fmt.Println(range_start)
-    fmt.Println(range_end)
-
-    // TODO CHANGE THIS
-
-    page_range := start >= range_start && start <= range_end  
-
-    fmt.Println(page_range)
-
-    // <><>
-    // <><>
-    var newStart = start + (ITEMS_PER_PAGE/2)
-    var more = newStart <= PRODUCTNUM
-
-    fmt.Println("FOR SEARCH starts")
-    fmt.Println(start)
-    fmt.Println(newStart)
-
-    loadIndex := false
-    if (start == range_start) && newSearch != 1 {
-      loadIndex = true
-    }
-
-    if newStart > range_end{
-      more = false
-    } 
-
-    fmt.Println(sessionID)
-    fmt.Println(page_range)
-
-    fmt.Println(more)
-
-    ses := wc.SessionContext{
-      SessionID: sessionID,
-      CurrentPage: page+1,
-    }
-    pag := wc.PageContext{
-      Next: newStart,
-      More: more,
-      Is_Searching: true,
-      SearchTerm: searchTerm,
-    }
-    webContext := m.NewGlobalContext_test(sqldb,ses,pag,nextProductsNums,productList)
-
-
-    template := "products"
-    if loadIndex {
-      template = "index"
-    }
-
-    if !page_range{
-      template = "none"
-    }
-
-    return c.Render(200, template, webContext)
-
   });
 
   e.GET("/p/:product_id", func(c echo.Context) error {
