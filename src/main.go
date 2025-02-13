@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"html"
 	db "htmxNpython/db_creation"
 	tr "htmxNpython/temp_render"
@@ -88,14 +89,14 @@ func main(){
     if err != nil {
       start = range_start 
     }
-    println("FOR / ranges")
-    println(page)
-    println(range_start)
-    println(range_end)
+    fmt.Println("FOR / ranges")
+    fmt.Println(page)
+    fmt.Println(range_start)
+    fmt.Println(range_end)
 
     page_range := start >= range_start && start <= range_end  
 
-    println(page_range)
+    fmt.Println(page_range)
 
     // <><>
     var newStart = start + (ITEMS_PER_PAGE/2)
@@ -104,9 +105,9 @@ func main(){
 
     var more = newStart <= PRODUCTNUM
   
-    println("FOR / starts")
-    println(start)
-    println(newStart)
+    fmt.Println("FOR / starts")
+    fmt.Println(start)
+    fmt.Println(newStart)
     
     var nextProductsNums []int
     if !(start > range_start){
@@ -125,19 +126,22 @@ func main(){
     } 
     // <><><>
 
-    println(sessionID)
-    println(page_range)
+    fmt.Println(sessionID)
+    fmt.Println(page_range)
 
-    println(more)
+    fmt.Println(more)
 
-    var values wc.InfiniteScroll = wc.InfiniteScroll{
-      NewStart: newStart,
-      More: more,
-      NextProductsNums: nextProductsNums,
+    ses := wc.Session_Test{
+      SessionID: sessionID,
+      CurrentPage: page+1,
     }
-
-    webContext := m.NewGlobalContext(sqldb, values, sessionID, page+1, productList, false,"")
-
+    pag := wc.PageContext_test{
+      Next: newStart,
+      More: more,
+      Is_Searching: false,
+      SearchTerm: "",
+    }
+    webContext := m.NewGlobalContext_test(sqldb,ses,pag,nextProductsNums,productList)
 
     template := "products"
     if loadIndex {
@@ -168,10 +172,10 @@ func main(){
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
 
-    println(sessionID)
-    println(num)
-    println(searchTerm)
-    println(range_end)
+    fmt.Println(sessionID)
+    fmt.Println(num)
+    fmt.Println(searchTerm)
+    fmt.Println(range_end)
 
     newPageNum := num / ITEMS_PER_PAGE
     newPageNum++
@@ -199,8 +203,8 @@ func main(){
   e.PUT("/addtocart", func(c echo.Context) error {
 
     productID := c.QueryParam("id")
-    println("!!!! API /addtocart !!!!")
-    println(productID)
+    fmt.Println("!!!! API /addtocart !!!!")
+    fmt.Println(productID)
     // not using a function because in case someone not having sessionID
     // they should not be able to add anything to the cart in the first place
     sessionID := c.Request().Header.Get("Cookie")
@@ -213,10 +217,8 @@ func main(){
 
     productInfo,_ := db.SelectCartItem(sqldb,productID)
 
-    type CartItem = wc.CartItem
-
     type oobProduct struct{
-      CartItem CartItem
+      CartItem wc.CartItem
       IsNew   bool
     }
     var isNew bool
@@ -237,8 +239,8 @@ func main(){
   e.PUT("/addtocart/page", func(c echo.Context) error {
 
     productID := c.QueryParam("id")
-    println("!!!! API /addtocart !!!!")
-    println(productID)
+    fmt.Println("!!!! API /addtocart !!!!")
+    fmt.Println(productID)
     sessionID := c.Request().Header.Get("Cookie")
     if sessionID == ""{
     }else{
@@ -279,7 +281,7 @@ func main(){
 
     //<><>
     searchTerm := c.QueryParam("search")
-    println(searchTerm)
+    fmt.Println(searchTerm)
     searchTerm = strings.TrimSpace(searchTerm)  // Remove whitespace
     searchTerm = html.EscapeString(searchTerm) // Prevent XSS
 
@@ -302,7 +304,7 @@ func main(){
     }
 
     productList,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
-    println(PRODUCTNUM)
+    fmt.Println(PRODUCTNUM)
 
 
 
@@ -311,25 +313,25 @@ func main(){
       nextProductsNums = GetNextProductNums(sessionInfo,PRODUCTNUM,true, searchTerm)
     }
 
-    println("FOR SEARCH ranges")
-    println(page)
-    println(range_start)
-    println(range_end)
+    fmt.Println("FOR SEARCH ranges")
+    fmt.Println(page)
+    fmt.Println(range_start)
+    fmt.Println(range_end)
 
     // TODO CHANGE THIS
 
     page_range := start >= range_start && start <= range_end  
 
-    println(page_range)
+    fmt.Println(page_range)
 
     // <><>
     // <><>
     var newStart = start + (ITEMS_PER_PAGE/2)
     var more = newStart <= PRODUCTNUM
 
-    println("FOR SEARCH starts")
-    println(start)
-    println(newStart)
+    fmt.Println("FOR SEARCH starts")
+    fmt.Println(start)
+    fmt.Println(newStart)
 
     loadIndex := false
     if (start == range_start) && newSearch != 1 {
@@ -340,18 +342,23 @@ func main(){
       more = false
     } 
 
-    println(sessionID)
-    println(page_range)
+    fmt.Println(sessionID)
+    fmt.Println(page_range)
 
-    println(more)
+    fmt.Println(more)
 
-    var values wc.InfiniteScroll = wc.InfiniteScroll{
-      NewStart: newStart,
-      More: more,
-      NextProductsNums: nextProductsNums,
+    ses := wc.Session_Test{
+      SessionID: sessionID,
+      CurrentPage: page+1,
     }
+    pag := wc.PageContext_test{
+      Next: newStart,
+      More: more,
+      Is_Searching: true,
+      SearchTerm: searchTerm,
+    }
+    webContext := m.NewGlobalContext_test(sqldb,ses,pag,nextProductsNums,productList)
 
-    webContext := m.NewGlobalContext(sqldb, values, sessionID, page+1,productList, true, searchTerm)
 
     template := "products"
     if loadIndex {
@@ -371,15 +378,15 @@ func main(){
     productId := c.Param("product_id")
     sessionID := c.Request().Header.Get("Cookie")
     sessionID = strings.Replace(sessionID, "session=", "",1)
-    println("VISITING PRODUCT")
-    println(productId)
-    println(sessionID)
+    fmt.Println("VISITING PRODUCT")
+    fmt.Println(productId)
+    fmt.Println(sessionID)
 
     type WebContext struct{
       Product wc.Product
       SessionContext wc.SessionContext
     }
-    println("TEST")
+    fmt.Println("TEST")
     product :=  db.GetProduct(sqldb,productId)
     //session := wc.NewSessionContext(sqldb, sessionID, 0)
 
@@ -394,8 +401,8 @@ func main(){
   e.GET("/c/:session_id", func(c echo.Context) error {
 
     sessionID := c.Param("session_id")
-    println("BYING")
-    println(sessionID)
+    fmt.Println("BYING")
+    fmt.Println(sessionID)
 
     cartInfo,_ := db.SelectCart(sqldb,sessionID)
     finalPrice := db.CountFinalPrice(cartInfo)
@@ -417,9 +424,9 @@ func main(){
 
     cardnumber := c.FormValue("cardNumber")
 
-    println("!!!!!!!!!!!!!!!!!!!")
-    println(cardnumber)
-    println("!!!!!!!!!!!!!!!!!!!")
+    fmt.Println("!!!!!!!!!!!!!!!!!!!")
+    fmt.Println(cardnumber)
+    fmt.Println("!!!!!!!!!!!!!!!!!!!")
 
     //stripe.Key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
     //var paymentData struct {

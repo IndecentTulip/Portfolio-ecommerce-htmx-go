@@ -11,7 +11,7 @@
     <input 
       class="form-control" type="search"
       name="search" placeholder="Begin Typing To Search Products..."
-      value="{{ .PageContext.SearchTerm }}"
+      value="{{ .Values.SearchTerm }}"
       hx-get="/search?newSearch=1"
       hx-trigger="input changed"
       hx-target="#products"

@@ -1,30 +1,12 @@
-<!--
-SessionContext
-  >
-  SessionID
-  CurrentPage
-  CurrentCart
-    >
-    CartList []CartItem
-      >
-      CartID
-      Product
-        >
-        Id
-        Name
-        Prise
-        Desc
--->
-
 {{ block "cart" . }}
 <div id="cart" style="position: fixed; right: 0; top: 0; width: 150px; background-color: #f0f0f0; height: 200px; overflow: scroll;">
   <h2>Cart:</h2>
   <div id="items">
 
-  {{ template "cartitems" .CurrentCart }}
+  {{ template "cartitems" . }}
   </div>
   <button 
-    onclick="window.location.href='/c/{{.SessionID}}'">
+    onclick="window.location.href='/c/{{ .Values.SessionID}}'">
   Buy</button>
 {{ end }}
 
@@ -43,10 +25,6 @@ SessionContext
   {{ end }}
 </div>
 {{ end }}
-<!-- 
-.CartItem
-.IsNew
--->
 
 {{ block "cartitems-oob" . }}
   {{ if .IsNew }}

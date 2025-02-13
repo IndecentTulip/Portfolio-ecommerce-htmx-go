@@ -1,10 +1,10 @@
 {{ block "nextpage" . }}
 <div>
-  {{ if .Searching}}
+  {{ if .Values.Is_Searching}}
     {{ range .NextProductsNums }}
       <button
         hx-trigger="click"
-        hx-put="/tabnum?num={{.}}&search={{$.SearchTerm}}" 
+        hx-put="/tabnum?num={{.}}&search={{$.Values.SearchTerm}}" 
         hx-swap="outerhtml" 
         hx-target="#body"
         > {{ . }}

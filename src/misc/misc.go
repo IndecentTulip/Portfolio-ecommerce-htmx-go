@@ -29,6 +29,18 @@ func CreateCurentCart(sqldb *sql.DB, token string) wc.CurrentCart{
     CartList: items,
   }
 }
+func CreateCurentCart_test(sqldb *sql.DB, token string) []wc.CartItem{
+
+  items,_ := db.SelectCart(sqldb, token)
+  println("CART CREATION!!!!!!!!!!")
+  println(token)
+  println(items)
+  println("CART CREATION!!!!!!!!!!")
+
+  return items
+}
+
+
 
 func NewSessionContext(db *sql.DB, token string, num int) wc.SessionContext{
   return wc.SessionContext{
@@ -52,6 +64,9 @@ func NewGlobalContext(sqldb *sql.DB, values wc.InfiniteScroll, token string, pag
     PageContext: NewPageContext(sqldb, values, productsList, isSearching, term),
     SessionContext: NewSessionContext(sqldb, token, pagenum),
   } 
+}
+func NewGlobalContext_test(sqldb *sql.DB, session wc.Session_Test, page wc.PageContext_test, stripNums []int, productsList []wc.Product) wc.GlobalContext_Test{
+  return wc.GenerateGlobalContext(session, page, productsList, stripNums, CreateCurentCart_test(sqldb,session.SessionID)) 
 }
 
 func GenerateNextProductNums(currentOffset int, itemsPerPage int, totalProducts int, searchTerm string) []int {

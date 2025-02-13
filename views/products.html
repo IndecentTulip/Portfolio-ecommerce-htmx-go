@@ -1,37 +1,22 @@
-<!-- PageContext
-  >
-  Start
-  Next 
-  More
-  SearchTerm
-  ProductsList
-    >
-    []Product
-      > 
-      Id 
-      Name
-      Price
-      Desc
--->
 {{ block "products" . }}
 
-  {{ range .PageContext.ProductsList }}
+  {{ range .ProductsList }}
     {{ template "product" . }}
   {{ end }}
 
-  {{ if .PageContext.More }}
-    {{ if .PageContext.Searching}}
+  {{ if .Values.More }}
+    {{ if .Values.Is_Searching}}
       <div 
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
-        hx-get="/search?start={{ .PageContext.Next }}&search={{ .PageContext.SearchTerm }}"
+        hx-get="/search?start={{ .Values.Next }}&search={{ .Values.SearchTerm }}"
       ></div>
 
     {{ else }}
       <div 
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
-        hx-get="/?start={{ .PageContext.Next }}"
+        hx-get="/?start={{ .Values.Next }}"
       ></div>
     {{ end }}
 
@@ -39,7 +24,7 @@
   {{ end }}
  
   <div id="nextpage">
-    {{ template "nextpage" .PageContext}}
+    {{ template "nextpage" .}}
   </div>
 
 </div>
