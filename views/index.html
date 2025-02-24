@@ -25,6 +25,8 @@
       document.cookie = "session=" + token;
       //alert("token: " + document.cookie);
     }
+
+    history.pushState({}, '', '/');
   </script>
   </body>
 </html>

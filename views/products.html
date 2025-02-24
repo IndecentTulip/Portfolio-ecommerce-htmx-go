@@ -44,11 +44,12 @@ ProductsList
   id="product-{{ .Id }}"
 >
   <hr />
-  <p>Prod Name: {{ .Name }}</p>
-  <p>Description: {{ .Desc }}</p>
-  <p>Price: {{ .Price}}</p>
-  <p>Stock: {{ .Quantity}}</p>
-  <a href="/p/{{ .Id }}"> more</a>
+  <a href="/p/{{ .Id }}">
+    <p>Prod Name: {{ .Name }}</p>
+    <p>Description: {{ .Desc }}</p>
+    <p>Price: {{ .Price}}</p>
+    <p>Stock: {{ .Quantity}}</p>
+  </a>
   <button 
     hx-put="/addtocart?id={{.Id}}"
     hx-trigger="click"

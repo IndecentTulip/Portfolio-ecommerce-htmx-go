@@ -123,6 +123,8 @@ func main(){
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
 
+    // maybe it would be better idea to expect newSearch to be ether 0 or 1
+    // rather then relying on the error to happen...
     newSearchStr := c.QueryParam("newSearch")
     newSearch,erro := strconv.Atoi(newSearchStr)
     if erro != nil{
@@ -162,6 +164,8 @@ func main(){
     var more = newStart <= PRODUCTNUM
 
     loadIndex := false
+    // newSearch should be 0, if it is true
+    // idk I found my own implementation confusing
     if (start == range_start) && newSearch != 1 {
       loadIndex = true
     }
@@ -308,6 +312,7 @@ func main(){
     return c.Render(200, "temp", sendContext)
   });
 
+  // !!!!!!!!!!!!!!!!!!!!!!!!
   e.GET("/p/:product_id", func(c echo.Context) error {
 
     productId := c.Param("product_id")
@@ -319,15 +324,22 @@ func main(){
 
     type WebContext struct{
       Product wc.Product
-      SessionContext wc.SessionContext
+      Values struct{
+        SessionID string
+      }
+      CartList []wc.CartItem
     }
+
     fmt.Println("TEST")
     product :=  db.GetProduct(sqldb,productId)
     //session := wc.NewSessionContext(sqldb, sessionID, 0)
 
     webContext := WebContext{
       Product: product,
- //     SessionContext: session,
+      Values: struct{SessionID string}{
+        SessionID: sessionID,
+      },
+      CartList: m.CreateCurentCart(sqldb,sessionID),
     }
 
     return c.Render(200,"productPage", webContext)
@@ -341,6 +353,7 @@ func main(){
 
     cartInfo,_ := db.SelectCart(sqldb,sessionID)
     finalPrice := db.CountFinalPrice(cartInfo)
+
 
     type CartPage struct{
       CartInfo []wc.CartItem

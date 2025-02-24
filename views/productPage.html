@@ -18,10 +18,12 @@
   }
   -->
   <body id="body">
-    <!--h1>{{ .SessionContext }}</h1>
---><
+    {{ template "navbarForProduct" . }}
+
+    {{ template "cart" .}}
 
     <div id="test">test</div>
+    <p>Prod Name: {{ .Product.Name }}</p>
     <div>{{ .Product.Id }}</div>
     <div>{{ .Product.Desc }}</div>
     <div>{{ .Product.Price }}</div>
@@ -34,7 +36,7 @@
   </body>
   <script>
     window.onload = function() {
-      alert("token: " + document.cookie);
+      //alert("token: " + document.cookie);
     }
   </script>
 </html>

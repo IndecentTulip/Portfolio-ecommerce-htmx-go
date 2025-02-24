@@ -4,10 +4,12 @@
   <div id="items">
 
   {{ template "cartitems" . }}
-  </div>
+
   <button 
     onclick="window.location.href='/c/{{ .Values.SessionID}}'">
   Buy</button>
+
+  </div>
 {{ end }}
 
 {{ block "cartitems" . }}
