@@ -45,11 +45,14 @@ ProductsList
 >
   <hr />
   <a href="/p/{{ .Id }}">
+    <!--
     <div><img style="width: 200px;" src="data:image/png;base64,{{.Image}}" alt="Product Image"/></div>
+-->
     <p>Prod Name: {{ .Name }}</p>
     <p>Description: {{ .Desc }}</p>
     <p>Price: {{ .Price}}</p>
     <p>Stock: {{ .Quantity}}</p>
+
   </a>
   <button 
     hx-put="/addtocart?id={{.Id}}"
@@ -57,6 +60,15 @@ ProductsList
     hx-swap="none"
     hx-target="#product-{{ .Id }}"
   > Add to the cart</button>
+  <div>
+  {{ range .Tags }}
+    <span 
+      hx-get="/search?search={{.}}" 
+      hx-swap="outerhtml" 
+      hx-target="#body"
+>[ {{.}} ]</span>
+  {{ end }}
+  </div>
   <hr />
 </div>
 {{ end }}

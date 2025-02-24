@@ -9,6 +9,7 @@ type Product struct {
   Desc string
   Quantity int
   Image string
+  Tags []string
 }
 type CartItem struct{
   Product Product
