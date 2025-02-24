@@ -4,7 +4,7 @@
     {{ range .NextProductsNums }}
       <button
         hx-trigger="click"
-        hx-put="/tabnum?num={{.}}&search={{$.Values.SearchTerm}}" 
+        hx-get="/search?num={{.}}&search={{$.Values.SearchTerm}}" 
         hx-swap="outerhtml" 
         hx-target="#body"
         > {{ . }}
@@ -15,7 +15,7 @@
     {{ range .NextProductsNums }}
       <button
         hx-trigger="click"
-        hx-put="/tabnum?num={{.}}" 
+        hx-get="/?num={{.}}" 
         hx-swap="outerhtml" 
         hx-target="#body"
         > {{ . }}

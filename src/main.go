@@ -58,6 +58,17 @@ func main(){
     
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
+    numStr := c.QueryParam("num")
+    if numStr != ""{
+      num,err := strconv.Atoi(numStr)
+      if err != nil{
+        num = 0
+      }
+      newPageNum := num / ITEMS_PER_PAGE
+      newPageNum++
+      db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
+    }
+
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
 
     // 1 : 1 - 10
@@ -122,6 +133,16 @@ func main(){
 
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
+    numStr := c.QueryParam("num")
+    if numStr != ""{
+      num,err := strconv.Atoi(numStr)
+      if err != nil{
+        num = 0
+      }
+      newPageNum := num / ITEMS_PER_PAGE
+      newPageNum++
+      db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
+    }
 
     // maybe it would be better idea to expect newSearch to be ether 0 or 1
     // rather then relying on the error to happen...
@@ -198,53 +219,6 @@ func main(){
 
     return c.Render(200, template, webContext)
 
-  });
-
-
-
-
-  e.PUT("/tabnum", func(c echo.Context) error {
-
-    numStr := c.QueryParam("num")
-    searchTerm := c.QueryParam("search")
-
-    num,err := strconv.Atoi(numStr)
-    if err != nil{
-      num = 0
-    }
-
-    sessionID := handleSessionWithoutAcc(sqldb,c)
-    sessionInfo,_ := db.GetSession(sqldb,sessionID)
-    page := int(int(sessionInfo.CurrentPage) - 1)
-    range_start := page * ITEMS_PER_PAGE
-    range_end := range_start + (ITEMS_PER_PAGE/2)
-
-    fmt.Println(sessionID)
-    fmt.Println(num)
-    fmt.Println(searchTerm)
-    fmt.Println(range_end)
-
-    newPageNum := num / ITEMS_PER_PAGE
-    newPageNum++
-    
-    type SendContext struct{
-      IsSearching bool
-      SearchTerm string
-    }
-    isSearching := false
-    if searchTerm != ""{
-      db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
-      isSearching = true
-    }else{
-      db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
-    }
-
-    sendContext := SendContext{
-      IsSearching: isSearching,
-      SearchTerm: searchTerm,
-    }
-
-    return c.Render(200, "restartpage", sendContext)
   });
 
   e.PUT("/addtocart", func(c echo.Context) error {
@@ -408,7 +382,7 @@ func main(){
 
     var sendContext any
 
-    return c.Render(200,"restartpage", sendContext)
+    return c.Render(200,"temp", sendContext)
   });
 
 
