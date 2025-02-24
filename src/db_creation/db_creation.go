@@ -2,12 +2,15 @@ package db_creation
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-  "github.com/google/uuid"
+
+	"github.com/google/uuid"
 
 	wc "htmxNpython/web_context"
 
@@ -22,7 +25,8 @@ func CreateProductsTable(db *sql.DB) {
       name TEXT,
       price INTEGER,
       desc TEXT,
-      quantity INTEGER
+      quantity INTEGER,
+      image BLOB
       );
   `
   _, err := db.Exec(query)
@@ -49,13 +53,18 @@ func insertIntoProducts(db *sql.DB) {
     return
   }
   
-  query := `INSERT INTO products (id, name, price, desc, quantity) VALUES (?, ?, ?, ?, ?)`
+  query := `INSERT INTO products (id, name, price, desc, quantity, image) VALUES (?, ?, ?, ?, ?, ?)`
+
+  imgData, err := os.ReadFile("test.png")
+    if err != nil {
+      log.Fatal(err)
+    }
   
   for i := 0; i < 100; i++ {
     desc := "lorem Ipsum"
     uniqueID := uuid.New().String()
-    if i > 50{ desc = "DEMO DEMO DEMO"}
-    _, err := db.Exec(query, uniqueID, "product " + strconv.Itoa(i), 25 + i, desc , 3)
+    if i > 50{ desc = "DEMO TEST"}
+    _, err := db.Exec(query, uniqueID, "product " + strconv.Itoa(i), 25 + i, desc , 3, imgData)
     if err != nil {
         log.Fatal(err)
     }
@@ -68,7 +77,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
   query := `
       SELECT
       COUNT(*) OVER() AS total,
-      id, name, price, desc, quantity 
+      id, name, price, desc, quantity, image
       FROM products 
       LIMIT 10
       OFFSET ?`
@@ -86,9 +95,10 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
   var price int
   var desc string
   var quantity int
+  var imgByte []byte
 
   for rows.Next() {
-    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity)
+    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte)
     if err != nil {
         log.Fatal(err)
     }
@@ -96,7 +106,8 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
     println("product list: adding:")
     println(id)
     println(name)
-    ProductList = append(ProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+    imgStr := base64.StdEncoding.EncodeToString(imgByte)
+    ProductList = append(ProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity, Image: imgStr})
   }
   println("product list total:")
   println(total)
@@ -110,7 +121,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
 
 
 func GetProduct(db *sql.DB, prodId string) wc.Product {
-  query := `SELECT id, name, price, desc, quantity FROM products WHERE id = ?`
+  query := `SELECT id, name, price, desc, quantity, image FROM products WHERE id = ?`
 
   var product wc.Product
 
@@ -124,14 +135,16 @@ func GetProduct(db *sql.DB, prodId string) wc.Product {
   var price int
   var desc string
   var quantity int
+  var imgByte []byte
 
   for rows.Next() {
-    err := rows.Scan(&id, &name, &price, &desc, &quantity)
+    err := rows.Scan(&id, &name, &price, &desc, &quantity, &imgByte)
     if err != nil {
         log.Fatal(err)
     }
     
-    product = wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity}
+    imgStr := base64.StdEncoding.EncodeToString(imgByte)
+    product = wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity, Image: imgStr}
   }
 
     defer rows.Close()
@@ -145,7 +158,7 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
   query := `
       SELECT
       COUNT(*) OVER() AS total,
-      id, name, price, desc, quantity 
+      id, name, price, desc, quantity, image 
       FROM products 
       WHERE ` + helpterBuildWhereClause(len(terms)) + `
       COLLATE NOCASE
@@ -173,16 +186,19 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
   var price int
   var desc string
   var quantity int
+  var imgByte []byte
 
   for rows.Next() {
-    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity)
+    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte)
     if err != nil {
         log.Fatal(err)
     }
     
     println("search: adding:")
     println(name)
-    searchProductList = append(searchProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity})
+
+    imgStr := base64.StdEncoding.EncodeToString(imgByte)
+    searchProductList = append(searchProductList, wc.Product{Id: id, Name: name, Price: price, Desc: desc, Quantity: quantity, Image: imgStr})
   }
   println("search total:")
   println(total)
@@ -357,6 +373,7 @@ func SelectCart(db *sql.DB, sessionID string) ([]wc.CartItem, error) {
         p.name,
         p.price,
         c.quantity,
+        p.image,
         (p.price * c.quantity) AS total
         FROM cart c
         JOIN products p ON c.ProductId = p.id
@@ -374,16 +391,18 @@ func SelectCart(db *sql.DB, sessionID string) ([]wc.CartItem, error) {
     var price int
     var quantity int
     var total int
+    var imgByte []byte
 
     for rows.Next() {
-        err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &total)
+        err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &imgByte, &total)
         if err != nil {
             return nil, err
         }
 
+        imgStr := base64.StdEncoding.EncodeToString(imgByte)
         rowData = append(rowData, 
             wc.CartItem{
-                Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity}, 
+                Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity, Image: imgStr}, 
                 CartID: cartId,
                 Total: total,
             })

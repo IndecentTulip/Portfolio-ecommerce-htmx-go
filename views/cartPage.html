@@ -27,12 +27,13 @@ type Product struct {
     <div>display total<div>
     <div>hook bank API or whatever to make a payment<div>
     {{ range .CartInfo  }}
-    <div>
-    <p> {{ .Product.Name }}</p>
-    <span> Price: {{ .Product.Price }}</span>
-    <span> Quantity: {{ .Product.Quantity }}</span>
-    <p style="color: green;"  > Total: {{ .Total }}</p>
-    <div>
+      <div>
+      <div><img style="width: 100px;" src="data:image/png;base64,{{.Product.Image}}" alt="Product Image"/></div>
+      <p> {{ .Product.Name }}</p>
+      <span> Price: {{ .Product.Price }}</span>
+      <span> Quantity: {{ .Product.Quantity }}</span>
+      <p style="color: green;"  > Total: {{ .Total }}</p>
+      </div>
     {{ end }}
 
     <div style="color: red;">Final Price {{ .FinalPrice }}</div>

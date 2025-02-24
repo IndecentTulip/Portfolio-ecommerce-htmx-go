@@ -8,6 +8,7 @@ type Product struct {
   Price int
   Desc string
   Quantity int
+  Image string
 }
 type CartItem struct{
   Product Product
