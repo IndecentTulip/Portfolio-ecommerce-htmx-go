@@ -687,9 +687,9 @@ func CreateDB() *sql.DB{
 
   CreateProductsTable(db)
   CreateTagsTable(db)
-  //insertDefaultTags(db)
+  insertDefaultTags(db)
   CreateTagsForProductTable(db)
-  //insertDefaultTags_for_Products(db)
+  insertDefaultTags_for_Products(db)
   CreateSessionsTable(db)
   CreateCartTable(db)
   insertIntoProducts(db)
