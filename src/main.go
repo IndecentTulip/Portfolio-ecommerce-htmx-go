@@ -22,6 +22,7 @@ import (
 
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+  "github.com/google/go-github/github"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -43,7 +44,8 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
   return sessionID
 }
 
-var oauth2Config oauth2.Config
+var oauth2Config_Google oauth2.Config
+var oauth2Config_Github oauth2.Config
 // made it random
 var oauthStateString = "123"
 
@@ -55,21 +57,33 @@ func init() {
 	}
 	defer file.Close()
 
-  var clientID string 
-  var clientSecret string 
+  var clientIDGoogle, clientSecretGoogle string 
+  var clientIDGithub, clientSecretGithub string 
 	scanner := bufio.NewScanner(file)
 
 	if scanner.Scan() {
-		clientID = scanner.Text()
+		clientIDGoogle = scanner.Text()
 	} else {
 		fmt.Println("No first line found.")
 		return
 	}
 
 	if scanner.Scan() {
-		clientSecret = scanner.Text()
+		clientSecretGoogle = scanner.Text()
 	} else {
 		fmt.Println("No second line found.")
+		return
+	}
+	if scanner.Scan() {
+		clientIDGithub = scanner.Text()
+	} else {
+		fmt.Println("No third line found.")
+		return
+	}
+	if scanner.Scan() {
+		clientSecretGithub = scanner.Text()
+	} else {
+		fmt.Println("No forth line found.")
 		return
 	}
 
@@ -77,13 +91,24 @@ func init() {
 		fmt.Println("Error reading the file:", err)
 	}
 
-	oauth2Config = oauth2.Config{
-		ClientID:     clientID,
-		ClientSecret: clientSecret,
+	oauth2Config_Google = oauth2.Config{
+		ClientID:     clientIDGoogle,
+		ClientSecret: clientSecretGoogle,
 		RedirectURL:  "http://localhost:25258/callback",
 		Scopes:       []string{"email", "profile"},   
 		Endpoint:     google.Endpoint,               
 	}
+	oauth2Config_Github = oauth2.Config{
+		ClientID:     clientIDGithub,
+		ClientSecret: clientSecretGithub,
+		RedirectURL:  "http://localhost:25258/callback/github",
+		Scopes:       []string{"read:user", "user:email"},   
+		Endpoint:     oauth2.Endpoint{
+      AuthURL:  "https://github.com/login/oauth/authorize",
+      TokenURL: "https://github.com/login/oauth/access_token",
+    },
+	}
+
 }
 
 
@@ -440,22 +465,20 @@ func main(){
 
   e.GET("/login", func(c echo.Context) error {
 
-    url := oauth2Config.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
-    // how do you redirect?
+    typeOfAuth := c.QueryParam("type")
+
+    var url string
+    if typeOfAuth == "google"{
+      url = oauth2Config_Google.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
+    }else if typeOfAuth == "github"{
+      url = oauth2Config_Github.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
+    }
 
     return c.Redirect(302, url)
   });
 
-type UserInfo struct {
-	Sub          string `json:"sub"`
-	Name         string `json:"name"`
-	GivenName    string `json:"given_name"`
-	FamilyName   string `json:"family_name"`
-	Email        string `json:"email"`
-	Picture      string `json:"picture"`
-	Locale       string `json:"locale"`
-}
-
+  // will leave it as just callback
+  // because it's OG and I want to shoot myself in the foot in the future
   e.GET("/callback", func(c echo.Context) error {
 
     state := c.QueryParam("state")
@@ -467,29 +490,59 @@ type UserInfo struct {
     if code == "" {
       return c.String(http.StatusBadRequest, "Code not found")
     }
-    token, err := oauth2Config.Exchange(c.Request().Context(), code)
+    token, err := oauth2Config_Google.Exchange(c.Request().Context(), code)
     if err != nil {
       return c.String(http.StatusInternalServerError, "Error during Exchange with oauth2")
     }
-    client := oauth2Config.Client(c.Request().Context(), token)
+    client := oauth2Config_Google.Client(c.Request().Context(), token)
     resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
     if err != nil {
       return c.String(http.StatusInternalServerError, "Error getting userinfo")
     }
 
-    var userInfo UserInfo
-    // var userInfo map[string]interface{}
+    //decoder := json.NewDecoder(resp.Body)
+    //var userInfo UserInfo
+    var userInfo map[string]interface{}
     body, err := io.ReadAll(resp.Body)
 
     err = json.Unmarshal(body, &userInfo)
 
-    message := "Successfully authenticated " + userInfo.Name
+    name := userInfo["name"].(string)
+    picture := userInfo["picture"].(string)
 
-    return c.String(http.StatusOK, message)
+    return c.JSON(http.StatusOK, map[string]string{
+      "name":    name,
+      "picture": picture,
+    })
   });
+
+  // idk why it doesn't want to work for me
   e.GET("/callback/github", func(c echo.Context) error {
+    code := c.QueryParam("code")
+    fmt.Println(code)
+    if code == "" {
+      return echo.NewHTTPError(http.StatusBadRequest, "Code not found")
+    }
 
-    return c.String(http.StatusOK, "temp")
+    token, err := oauth2Config_Github.Exchange(c.Request().Context(), code)
+
+    fmt.Println(token)
+    if err != nil {
+      return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error during exchange: %s", err))
+    }
+
+    client := oauth2Config_Github.Client(c.Request().Context(), token)
+    githubClient := github.NewClient(client)
+
+    user, _, err := githubClient.Users.Get(c.Request().Context(), "")
+    if err != nil {
+      return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving GitHub user info: %s", err))
+    }
+    return c.JSON(http.StatusOK, map[string]string{
+      "name":  *user.Name,
+      "email": *user.Email,
+    })
   });
+
   e.Logger.Fatal(e.Start(":25258"))
 }
