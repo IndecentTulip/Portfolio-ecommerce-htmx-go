@@ -1,12 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html"
 	db "htmxNpython/db_creation"
 	tr "htmxNpython/temp_render"
 	wc "htmxNpython/web_context"
+	"io"
+	"net/http"
+	"os"
 
 	m "htmxNpython/misc"
 	"strconv"
@@ -14,6 +19,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -35,12 +43,58 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
   return sessionID
 }
 
+var oauth2Config oauth2.Config
+// made it random
+var oauthStateString = "123"
+
+func init() {
+	file, err := os.Open("authcred.txt")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+
+  var clientID string 
+  var clientSecret string 
+	scanner := bufio.NewScanner(file)
+
+	if scanner.Scan() {
+		clientID = scanner.Text()
+	} else {
+		fmt.Println("No first line found.")
+		return
+	}
+
+	if scanner.Scan() {
+		clientSecret = scanner.Text()
+	} else {
+		fmt.Println("No second line found.")
+		return
+	}
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading the file:", err)
+	}
+
+	oauth2Config = oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  "http://localhost:25258/callback",
+		Scopes:       []string{"email", "profile"},   
+		Endpoint:     google.Endpoint,               
+	}
+}
+
+
 func main(){
 
   sqldb := db.CreateDB()
 
   e := echo.New()
   e.Use(middleware.Logger())
+
+  const ITEMS_PER_PAGE = 20
 
   // Renderer is an interface
   // by sayin that it is equal to "*Templates"
@@ -49,8 +103,6 @@ func main(){
 
   e.Static("/static/images", "images")
   e.Static("/static/css", "css")
-
-  const ITEMS_PER_PAGE = 20
 
   e.GET("/", func(c echo.Context) error {
 
@@ -350,6 +402,7 @@ func main(){
     fmt.Println(cardnumber)
     fmt.Println("!!!!!!!!!!!!!!!!!!!")
 
+    // not my actual key btw, GPT gave me one )))))
     //stripe.Key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
     //var paymentData struct {
     //    Amount int64  `json:"amount"`
@@ -385,8 +438,58 @@ func main(){
     return c.Render(200,"temp", sendContext)
   });
 
+  e.GET("/login", func(c echo.Context) error {
 
+    url := oauth2Config.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
+    // how do you redirect?
 
+    return c.Redirect(302, url)
+  });
 
+type UserInfo struct {
+	Sub          string `json:"sub"`
+	Name         string `json:"name"`
+	GivenName    string `json:"given_name"`
+	FamilyName   string `json:"family_name"`
+	Email        string `json:"email"`
+	Picture      string `json:"picture"`
+	Locale       string `json:"locale"`
+}
+
+  e.GET("/callback", func(c echo.Context) error {
+
+    state := c.QueryParam("state")
+
+    fmt.Println("state")
+    fmt.Println(state)
+
+    code := c.QueryParam("code")
+    if code == "" {
+      return c.String(http.StatusBadRequest, "Code not found")
+    }
+    token, err := oauth2Config.Exchange(c.Request().Context(), code)
+    if err != nil {
+      return c.String(http.StatusInternalServerError, "Error during Exchange with oauth2")
+    }
+    client := oauth2Config.Client(c.Request().Context(), token)
+    resp, err := client.Get("https://www.googleapis.com/oauth2/v3/userinfo")
+    if err != nil {
+      return c.String(http.StatusInternalServerError, "Error getting userinfo")
+    }
+
+    var userInfo UserInfo
+    // var userInfo map[string]interface{}
+    body, err := io.ReadAll(resp.Body)
+
+    err = json.Unmarshal(body, &userInfo)
+
+    message := "Successfully authenticated " + userInfo.Name
+
+    return c.String(http.StatusOK, message)
+  });
+  e.GET("/callback/github", func(c echo.Context) error {
+
+    return c.String(http.StatusOK, "temp")
+  });
   e.Logger.Fatal(e.Start(":25258"))
 }
