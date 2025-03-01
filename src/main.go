@@ -20,9 +20,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
+	"github.com/google/go-github/v39/github"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-  "github.com/google/go-github/github"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -47,7 +47,7 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
 var oauth2Config_Google oauth2.Config
 var oauth2Config_Github oauth2.Config
 // made it random
-var oauthStateString = "123"
+var oauthStateString = "randomstate"
 
 func init() {
 	file, err := os.Open("authcred.txt")
@@ -102,11 +102,11 @@ func init() {
 		ClientID:     clientIDGithub,
 		ClientSecret: clientSecretGithub,
 		RedirectURL:  "http://localhost:25258/callback/github",
-		Scopes:       []string{"read:user", "user:email"},   
+		Scopes:       []string{"read:user", "user:email"},
 		Endpoint:     oauth2.Endpoint{
-      AuthURL:  "https://github.com/login/oauth/authorize",
-      TokenURL: "https://github.com/login/oauth/access_token",
-    },
+			AuthURL:  "https://github.com/login/oauth/authorize",
+			TokenURL: "https://github.com/login/oauth/access_token",
+		},
 	}
 
 }
@@ -474,7 +474,8 @@ func main(){
       url = oauth2Config_Github.AuthCodeURL(oauthStateString, oauth2.AccessTypeOffline)
     }
 
-    return c.Redirect(302, url)
+    //http.Redirect(w, r, oauth2Config.AuthCodeURL(oauth2State, oauth2.AccessTypeOffline), http.StatusFound)
+    return c.Redirect(http.StatusFound, url)
   });
 
   // will leave it as just callback
@@ -508,41 +509,40 @@ func main(){
     err = json.Unmarshal(body, &userInfo)
 
     name := userInfo["name"].(string)
-    picture := userInfo["picture"].(string)
+    //picture := userInfo["picture"].(string)
 
-    return c.JSON(http.StatusOK, map[string]string{
-      "name":    name,
-      "picture": picture,
-    })
+    return c.HTML(http.StatusOK, fmt.Sprintf("<h1>Hello, %s! You are successfully authenticated with Google.</h1>", name))
   });
 
-  // idk why it doesn't want to work for me
   e.GET("/callback/github", func(c echo.Context) error {
+
+    state := c.QueryParam("state")
+    if state != oauthStateString {
+      return c.String(http.StatusBadRequest, "Invalid state")
+    }
+
     code := c.QueryParam("code")
-    fmt.Println(code)
     if code == "" {
-      return echo.NewHTTPError(http.StatusBadRequest, "Code not found")
+      return c.String(http.StatusBadRequest, "Code not found")
     }
 
     token, err := oauth2Config_Github.Exchange(c.Request().Context(), code)
-
-    fmt.Println(token)
     if err != nil {
-      return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error during exchange: %s", err))
+      return c.String(http.StatusInternalServerError, "Failed to exchange token")
     }
 
-    client := oauth2Config_Github.Client(c.Request().Context(), token)
-    githubClient := github.NewClient(client)
+    // issue was here
+    client := github.NewClient(oauth2.NewClient(c.Request().Context(), oauth2.StaticTokenSource(&oauth2.Token{
+      AccessToken: token.AccessToken,
+    })))
 
-    user, _, err := githubClient.Users.Get(c.Request().Context(), "")
+    user, _, err := client.Users.Get(c.Request().Context(), "")
     if err != nil {
-      return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Error retrieving GitHub user info: %s", err))
+      return c.String(http.StatusInternalServerError, "Failed to get user info")
     }
-    return c.JSON(http.StatusOK, map[string]string{
-      "name":  *user.Name,
-      "email": *user.Email,
-    })
-  });
+
+    return c.HTML(http.StatusOK, fmt.Sprintf("<h1>Hello, %s! You are successfully authenticated with GitHub.</h1>", *user.Login))
+    });
 
   e.Logger.Fatal(e.Start(":25258"))
 }
