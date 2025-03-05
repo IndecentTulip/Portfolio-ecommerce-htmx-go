@@ -6,6 +6,7 @@ require (
 	github.com/google/go-github/v39 v39.2.0
 	github.com/labstack/echo/v4 v4.13.3
 	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/stripe/stripe-go/v72 v72.122.0
 	golang.org/x/oauth2 v0.27.0
 )
 

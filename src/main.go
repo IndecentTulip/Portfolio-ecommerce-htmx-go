@@ -24,7 +24,8 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/stripe/stripe-go/v72"
+	"github.com/stripe/stripe-go/v72/checkout/session"
 )
 
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
@@ -86,6 +87,13 @@ func init() {
 		fmt.Println("No forth line found.")
 		return
 	}
+  if scanner.Scan(){
+    stripe.Key = scanner.Text()
+  } else {
+		fmt.Println("No fifth line found.")
+		return
+	}
+
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println("Error reading the file:", err)
@@ -202,6 +210,7 @@ func main(){
       template = "none"
     }
 
+    
     return c.Render(200, template, webContext)
   });
 
@@ -419,48 +428,47 @@ func main(){
     return c.Render(200,"cartPage", cartContext)
   });
 
-  e.PUT("/payment", func(c echo.Context) error {
+  e.GET("/payment", func(c echo.Context) error {
 
-    cardnumber := c.FormValue("cardNumber")
+    sessionID := c.Request().Header.Get("Cookie")
+    if sessionID == ""{
+    }else{
+      sessionID = strings.Replace(sessionID, "session=", "",1)
+    }
 
-    fmt.Println("!!!!!!!!!!!!!!!!!!!")
-    fmt.Println(cardnumber)
-    fmt.Println("!!!!!!!!!!!!!!!!!!!")
+    cartInfo,_ := db.SelectCart(sqldb,sessionID)
+    finalPrice := db.CountFinalPrice(cartInfo)
 
-    // not my actual key btw, GPT gave me one )))))
-    //stripe.Key = "sk_test_4eC39HqLyjWDarjtT1zdp7dc"
-    //var paymentData struct {
-    //    Amount int64  `json:"amount"`
-    //    Token  string `json:"token"` // Token from the frontend
-    //}
-    //err := json.NewDecoder(r.Body).Decode(&paymentData)
-    //if err != nil {
-    //    http.Error(w, "Invalid data", http.StatusBadRequest)
-    //    return
-    //}
-    //
-    //// Create a payment intent with Stripe
-    //pi, err := paymentintent.New(&stripe.PaymentIntentParams{
-    //    Amount:   stripe.Int64(paymentData.Amount),
-    //    Currency: stripe.String(string(stripe.CurrencyUSD)),
-    //    PaymentMethod: stripe.String(paymentData.Token),
-    //    ConfirmationMethod: stripe.String(string(stripe.PaymentIntentConfirmationMethodManual)),
-    //    Confirm: stripe.Bool(true),
-    //})
-    //
-    //if err != nil {
-    //    http.Error(w, "Payment processing error", http.StatusInternalServerError)
-    //    return
-    //}
-    //
-    //// Return the payment intent result
-    //response := map[string]interface{}{
-    //    "success": pi.Status == stripe.PaymentIntentStatusSucceeded,
-    //}
+    // TODO store finalPrice as a float number
+    fmt.Println(finalPrice)
 
-    var sendContext any
+    params := &stripe.CheckoutSessionParams{
+      PaymentMethodTypes: stripe.StringSlice([]string{
+        "card",
+      }),
+      LineItems: []*stripe.CheckoutSessionLineItemParams{
+        {
+          Name:        stripe.String("Product Name"),
+          Description: stripe.String("Description of the product"),
+          Amount:      stripe.Int64(int64(finalPrice * 100)),
+          Currency:    stripe.String(string(stripe.CurrencyCAD)),
+          Quantity:    stripe.Int64(1),
+        },
+      },
+      Mode:      stripe.String(string(stripe.CheckoutSessionModePayment)),
+      SuccessURL: stripe.String("http://localhost:25258/success"),
+      CancelURL:  stripe.String("http://localhost:25258/"),
+    }
 
-    return c.Render(200,"temp", sendContext)
+    // Create the session
+    session, err := session.New(params)
+    if err != nil {
+      return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to create session: %v", err))
+    }
+
+    // Send the session ID to the frontend to be used in Stripe Checkout
+    return c.Redirect(http.StatusSeeOther, session.URL)
+
   });
 
   e.GET("/login", func(c echo.Context) error {

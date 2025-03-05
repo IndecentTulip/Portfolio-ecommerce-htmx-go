@@ -5,7 +5,7 @@
       <button
         hx-trigger="click"
         hx-get="/search?num={{.}}&search={{$.Values.SearchTerm}}" 
-        hx-swap="outerhtml" 
+        hx-swap="outerhtml show:top" 
         hx-target="#body"
         > {{ . }}
       </button>
@@ -16,7 +16,7 @@
       <button
         hx-trigger="click"
         hx-get="/?num={{.}}" 
-        hx-swap="outerhtml" 
+        hx-swap="outerhtml show:top" 
         hx-target="#body"
         > {{ . }}
       </button>

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 rm ./database/products.db
+mkdir ./database 
 touch ./database/products.db
 
 touch ./src/authcred.txt
@@ -22,6 +23,11 @@ echo "$clientidgit" >> ./src/authcred.txt
 echo "provide Client secret"
 read clientsecretgit
 echo "$clientsecretgit" >> ./src/authcred.txt
+echo "info related to stripe"
+echo "<><><><><><><><><><>"
+echo "provide secret key"
+read stipekey
+echo "$stipekey" >> ./src/authcred.txt
 
 
 cd ./src/

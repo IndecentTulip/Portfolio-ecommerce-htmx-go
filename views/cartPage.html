@@ -37,13 +37,7 @@ type Product struct {
     {{ end }}
 
     <div style="color: red;">Final Price {{ .FinalPrice }}</div>
-    <form 
-      id="payment-form"
-      hx-put="/payment"
-    >
-    <!-- NOTE THAT I DON'T KNOW WHAT SHOULD BE REQUESTED IN THE FORM -->
-    <input type="text" name="cardNumber" placeholder="Card Number">
-    <button type="submit">Pay Now</button>
+      <a href="http://localhost:25258/payment" class="button">Pay Now</a>
     </form>
   </body>
 </html>
