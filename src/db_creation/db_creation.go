@@ -84,7 +84,10 @@ func InsertIntoUser(db *sql.DB, user wc.UserContext){
 
   row := db.QueryRow(checkQuery, user.UserID)
   var num int
-  row.Scan(&num)
+  err := row.Scan(&num)
+  if err != nil {
+    log.Fatal(err)
+  }
 
   if num > 0 {
     println("User already inserted")
@@ -93,7 +96,7 @@ func InsertIntoUser(db *sql.DB, user wc.UserContext){
 
   query := `INSERT INTO users (id, name, profileImage) VALUES (?, ?, ?)`
 
-  _, err := db.Exec(query, user.UserID, user.UserName, user.ProfileImage)
+  _, err = db.Exec(query, user.UserID, user.UserName, user.ProfileImage)
   if err != nil {
       log.Fatal(err)
   }
@@ -128,12 +131,11 @@ func GetUser(db *sql.DB, sessionID string) wc.UserContext{
   
   row := db.QueryRow(query, sessionID)
 
-  var name string
-  var image string
+  var name, image string
 
   err := row.Scan(&name, &image)
   if err != nil {
-      log.Fatal(err)
+    log.Fatal(err)
   }
 
   user :=  wc.UserContext{
@@ -177,15 +179,15 @@ func insertDefaultTags(db *sql.DB){
 func insertIntoProducts(db *sql.DB) {
   checkQuery := `SELECT COUNT(*) FROM products`
 
-  rows,_ := db.Query(checkQuery)
+  row := db.QueryRow(checkQuery)
   var num int
 
-  for rows.Next() {
-    err := rows.Scan(&num)
-    if err != nil {
-        log.Fatal(err)
-    }
+  
+  err := row.Scan(&num)
+  if err != nil {
+    log.Fatal(err)
   }
+
   if num >= 100 {
     println("Products are already inserted")
     return
@@ -299,14 +301,9 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
     log.Fatal(err)
   }
 
-  var total int
-  var id string
-  var name string
-  var price int
-  var desc string
-  var quantity int
+  var id, name, desc, tagsStr string
+  var price, total, quantity int
   var imgByte []byte
-  var tagsStr string
 
   for rows.Next() {
     err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte, &tagsStr)
@@ -350,11 +347,8 @@ func GetProduct(db *sql.DB, prodId string) wc.Product {
     log.Fatal(err)
   }
 
-  var id string
-  var name string
-  var price int
-  var desc string
-  var quantity int
+  var id, name, desc string
+  var price, quantity int
   var imgByte []byte
 
   for rows.Next() {
@@ -425,14 +419,9 @@ OFFSET ?
     log.Fatal(err)
   }
 
-  var total int
-  var id string
-  var name string
-  var price int
-  var desc string
-  var quantity int
+  var id, name, desc, tagsStr string
+  var total, price, quantity int
   var imgByte []byte
-  var tagsStr string
 
   for rows.Next() {
     err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte, &tagsStr)
@@ -603,7 +592,11 @@ func IsLoggedIn(db *sql.DB, sessionID string) bool{
 	row := db.QueryRow(query, sessionID)
 
   var num int 
-  row.Scan(&num)
+  err := row.Scan(&num)
+	if err != nil {
+    log.Fatal(err)
+		return false 
+  }
   println(num)
   if num == 1 {
     println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
@@ -652,55 +645,119 @@ func CreateCartTable(db *sql.DB) {
   }
   fmt.Println("Cart Table created successfully!")
 }
-func SelectCart(db *sql.DB, sessionID string) ([]wc.CartItem, error) {
-    var rowData []wc.CartItem
+func SelectCart_FirstTime(db *sql.DB, userloggedIn bool, sessionID string) []wc.CartItem {
 
-    query := `SELECT 
-        c.cartId,
-        c.ProductId,
-        p.name,
-        p.price,
-        c.quantity,
-        p.image,
-        (p.price * c.quantity) AS total
-        FROM cart c
-        JOIN products p ON c.ProductId = p.id
-        WHERE c.SessionId = ?`
+  if userloggedIn == true {
+    //[ ] check for the existing session(not used now) that had userID linked to it 
+    query := `SELECT id 
+      FROM sessions 
+      WHERE UserID = (SELECT UserID FROM sessions WHERE id = ?) AND id != ? LIMIT 1`;
 
-    rows, err := db.Query(query, sessionID)
+    var sessionID_OLD string
+    var WeGotSessionThatHadThatAccLinked bool // really good naming
+    // I really don't want to merge several sessionID's carts togerer (if there are some)
+    row:= db.QueryRow(query, sessionID,sessionID)
+    err := row.Scan(&sessionID_OLD)
     if err != nil {
-        return nil, err
+      println("WTF 1")
+      WeGotSessionThatHadThatAccLinked = false
+    }else {
+      WeGotSessionThatHadThatAccLinked = true
     }
-    defer rows.Close()
 
-    var cartId string
-    var productId string
-    var name string
-    var price int
-    var quantity int
-    var total int
-    var imgByte []byte
+    println("WTF 2")
 
-    for rows.Next() {
-        err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &imgByte, &total)
+    if WeGotSessionThatHadThatAccLinked {
+      //[ ] copy that session's cart items to the new session
+
+      // check if a new session started to have a cart, 
+      //if so then we will ignore old session cart
+      checkquery := `SELECT COUNT(*) 
+        FROM cart 
+        WHERE SessionId = ?;`
+
+      var num int 
+      row= db.QueryRow(checkquery, sessionID)
+      err = row.Scan(&num)
+      if err != nil {
+        log.Fatal(err)
+        return nil
+      }
+      if num == 0 {
+        updatequery := `UPDATE cart
+          SET SessionId = ?
+          WHERE SessionId = ?;`
+
+        _, err := db.Exec(updatequery, sessionID, sessionID_OLD)
         if err != nil {
-            return nil, err
+          log.Fatal(err)
         }
 
-        imgStr := base64.StdEncoding.EncodeToString(imgByte)
-        rowData = append(rowData, 
-            wc.CartItem{
-                Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity, Image: imgStr}, 
-                CartID: cartId,
-                Total: total,
-            })
+      }
+      //[ ] delete old session
+      deletequery := ` DELETE FROM sessions 
+        WHERE id = ?;`
+      _, err = db.Exec(deletequery, sessionID_OLD)
+      if err != nil {
+        log.Fatal(err)
+      }
+
+    }
+  }else{
+    return SelectCart(db, sessionID)
+  }
+  return SelectCart(db, sessionID)
+}
+
+
+func SelectCart(db *sql.DB, sessionID string) []wc.CartItem {
+  var rowData []wc.CartItem
+
+  query := `SELECT 
+      c.cartId,
+      c.ProductId,
+      p.name,
+      p.price,
+      c.quantity,
+      p.image,
+      (p.price * c.quantity) AS total
+      FROM cart c
+      JOIN products p ON c.ProductId = p.id
+      WHERE c.SessionId = ?`
+
+  rows, err := db.Query(query, sessionID)
+  if err != nil {
+      log.Fatal(err)
+      return nil
+  }
+  defer rows.Close()
+
+  var cartId, productId, name string
+  var price, quantity, total int
+  var imgByte []byte
+
+  for rows.Next() {
+    err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &imgByte, &total)
+    if err != nil {
+      log.Fatal(err)
+      return nil
     }
 
-    if err := rows.Err(); err != nil {
-        return nil, err
-    }
+    imgStr := base64.StdEncoding.EncodeToString(imgByte)
+    rowData = append(rowData, 
+      wc.CartItem{
+        Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity, Image: imgStr}, 
+        CartID: cartId,
+        Total: total,
+      })
+  }
 
-    return rowData, nil
+  if err := rows.Err(); err != nil {
+    log.Fatal(err)
+    return nil
+  }
+
+  return rowData
 }
 func CountFinalPrice(cartItemsList []wc.CartItem) (int) {
 
@@ -729,15 +786,12 @@ func SelectCartItem(db *sql.DB, productId string) (wc.CartItem, error) {
 
     row := db.QueryRow(query, productId)
 
-    var cartId string
-    var name string
-    var price int
-    var quantity int
-    var total int
+    var cartId, name string
+    var price, quantity, total int
 
     err := row.Scan(&cartId, &name, &price, &quantity, &total)
     if err != nil {
-        return product, err
+      return product, err
     }
 
     product.Product = wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity}

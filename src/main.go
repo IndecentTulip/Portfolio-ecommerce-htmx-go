@@ -37,7 +37,6 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
     sessionID = strings.Replace(sessionID, "session=", "",1)
     _,err := db.GetSession(sqldb,sessionID)
     if err != nil{
-      fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
       sessionID = db.CreateSession(sqldb)
       fmt.Println(sessionID)
       db.UpdatePageNumSes(sqldb,sessionID,1)
@@ -193,7 +192,6 @@ func main(){
     } 
 
     // TODO FIX
-    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
 
     ses := wc.SessionContext{
       SessionID: sessionID,
@@ -206,16 +204,7 @@ func main(){
       SearchTerm: "",
     }
     
-    var user wc.UserContext
-    if !userloggedIn{
-      user = wc.UserContext{
-        UserName: "test",
-        ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
-      }
-    }else{
-      user = db.GetUser(sqldb,sessionID) 
-    } 
-    webContext := m.NewGlobalContext(sqldb,ses,pag,user)
+    webContext := m.NewGlobalContext(sqldb,ses,pag)
 
     template := "products"
     if loadIndex {
@@ -295,7 +284,6 @@ func main(){
     if newStart > range_end{
       more = false
     } 
-    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
 
     ses := wc.SessionContext{
       SessionID: sessionID,
@@ -307,16 +295,10 @@ func main(){
       Is_Searching: true,
       SearchTerm: searchTerm,
     }
-    var user wc.UserContext
-    if !userloggedIn{
-      user = wc.UserContext{
-        UserName: "test",
-        ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
-      }
-    }else{
-      user = db.GetUser(sqldb,sessionID) 
-    } 
-    webContext := m.NewGlobalContext(sqldb,ses,pag,user)
+
+    println("HELLO 2")
+    webContext := m.NewGlobalContext(sqldb,ses,pag)
+    println("HELLO 3")
 
     template := "products"
     if loadIndex {
@@ -418,12 +400,13 @@ func main(){
     product :=  db.GetProduct(sqldb,productId)
     //session := wc.NewSessionContext(sqldb, sessionID, 0)
 
+    cartList := db.SelectCart(sqldb,sessionID)
     webContext := WebContext{
       Product: product,
       Values: struct{SessionID string}{
         SessionID: sessionID,
       },
-      CartList: m.CreateCurentCart(sqldb,sessionID),
+      CartList: cartList,
     }
 
     return c.Render(200,"productPage", webContext)
@@ -435,7 +418,7 @@ func main(){
     fmt.Println("BYING")
     fmt.Println(sessionID)
 
-    cartInfo,_ := db.SelectCart(sqldb,sessionID)
+    cartInfo := db.SelectCart(sqldb,sessionID)
     finalPrice := db.CountFinalPrice(cartInfo)
 
 
@@ -460,7 +443,7 @@ func main(){
       sessionID = strings.Replace(sessionID, "session=", "",1)
     }
 
-    cartInfo,_ := db.SelectCart(sqldb,sessionID)
+    cartInfo := db.SelectCart(sqldb,sessionID)
     finalPrice := db.CountFinalPrice(cartInfo)
 
     // TODO store finalPrice as a float number
