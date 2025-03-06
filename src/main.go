@@ -31,13 +31,15 @@ import (
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
   sessionID := c.Request().Header.Get("Cookie")
   if sessionID == ""{
-    sessionID,_ = db.CreateSession(sqldb)
+    sessionID = db.CreateSession(sqldb)
     db.UpdatePageNumSes(sqldb,sessionID,1)
   }else{
     sessionID = strings.Replace(sessionID, "session=", "",1)
     _,err := db.GetSession(sqldb,sessionID)
     if err != nil{
-      sessionID,_ = db.CreateSession(sqldb)
+      fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      sessionID = db.CreateSession(sqldb)
+      fmt.Println(sessionID)
       db.UpdatePageNumSes(sqldb,sessionID,1)
     }
   }
@@ -190,6 +192,9 @@ func main(){
       more = false
     } 
 
+    // TODO FIX
+    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
+
     ses := wc.SessionContext{
       SessionID: sessionID,
       CurrentPage: page+1,
@@ -200,7 +205,17 @@ func main(){
       Is_Searching: false,
       SearchTerm: "",
     }
-    webContext := m.NewGlobalContext(sqldb,ses,pag)
+    
+    var user wc.UserContext
+    if !userloggedIn{
+      user = wc.UserContext{
+        UserName: "test",
+        ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
+      }
+    }else{
+      user = db.GetUser(sqldb,sessionID) 
+    } 
+    webContext := m.NewGlobalContext(sqldb,ses,pag,user)
 
     template := "products"
     if loadIndex {
@@ -280,6 +295,7 @@ func main(){
     if newStart > range_end{
       more = false
     } 
+    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
 
     ses := wc.SessionContext{
       SessionID: sessionID,
@@ -291,8 +307,16 @@ func main(){
       Is_Searching: true,
       SearchTerm: searchTerm,
     }
-
-    webContext := m.NewGlobalContext(sqldb,ses,pag)
+    var user wc.UserContext
+    if !userloggedIn{
+      user = wc.UserContext{
+        UserName: "test",
+        ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
+      }
+    }else{
+      user = db.GetUser(sqldb,sessionID) 
+    } 
+    webContext := m.NewGlobalContext(sqldb,ses,pag,user)
 
     template := "products"
     if loadIndex {
@@ -460,13 +484,11 @@ func main(){
       CancelURL:  stripe.String("http://localhost:25258/"),
     }
 
-    // Create the session
     session, err := session.New(params)
     if err != nil {
       return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to create session: %v", err))
     }
 
-    // Send the session ID to the frontend to be used in Stripe Checkout
     return c.Redirect(http.StatusSeeOther, session.URL)
 
   });
@@ -496,6 +518,9 @@ func main(){
     fmt.Println(state)
 
     code := c.QueryParam("code")
+
+    println("CODE CODE CODE CODE CODE")
+    println(code)
     if code == "" {
       return c.String(http.StatusBadRequest, "Code not found")
     }
@@ -516,10 +541,23 @@ func main(){
 
     err = json.Unmarshal(body, &userInfo)
 
-    name := userInfo["name"].(string)
-    //picture := userInfo["picture"].(string)
+    sessionID := c.Request().Header.Get("Cookie")
+    if sessionID == ""{
+    }else{
+      sessionID = strings.Replace(sessionID, "session=", "",1)
+    }
 
-    return c.HTML(http.StatusOK, fmt.Sprintf("<h1>Hello, %s! You are successfully authenticated with Google.</h1>", name))
+    user := wc.UserContext{
+      UserName: userInfo["name"].(string),
+      UserID: userInfo["sub"].(string),
+      ProfileImage: userInfo["picture"].(string),
+    }
+
+    db.InsertIntoUser(sqldb, user)
+    db.UpdateUserSes(sqldb,sessionID,user.UserID)
+    println("CALLED UpdateUserSes")
+
+    return c.Redirect(http.StatusSeeOther, "http://localhost:25258/")
   });
 
   e.GET("/callback/github", func(c echo.Context) error {

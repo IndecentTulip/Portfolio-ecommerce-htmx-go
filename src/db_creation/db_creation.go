@@ -18,6 +18,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func CreateUsersTable(db *sql.DB) {
+  query := `
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      profileImage BLOB
+      );
+  `
+  _, err := db.Exec(query)
+  if err != nil {
+    log.Fatal(err)
+  }
+  fmt.Println("Users Table created successfully!")
+}
 
 func CreateProductsTable(db *sql.DB) {
   query := `
@@ -63,6 +77,75 @@ func CreateTagsForProductTable(db *sql.DB) {
     log.Fatal(err)
   }
   fmt.Println("Tags for Products Table created successfully!")
+}
+
+func InsertIntoUser(db *sql.DB, user wc.UserContext){
+  checkQuery := `SELECT COUNT(*) FROM users WHERE id == ?`
+
+  row := db.QueryRow(checkQuery, user.UserID)
+  var num int
+  row.Scan(&num)
+
+  if num > 0 {
+    println("User already inserted")
+    return
+  }
+
+  query := `INSERT INTO users (id, name, profileImage) VALUES (?, ?, ?)`
+
+  _, err := db.Exec(query, user.UserID, user.UserName, user.ProfileImage)
+  if err != nil {
+      log.Fatal(err)
+  }
+
+  fmt.Println("User Data inserted successfully!")
+
+}
+
+func UpdateUserSes(db *sql.DB, sessionID string, userID string){
+  query := `UPDATE sessions SET userID = ? WHERE id = ?`
+
+  // Using Exec() for UPDATE query since it doesn't return rows.
+  res, err := db.Exec(query, userID, sessionID)
+  if err != nil {
+    fmt.Println("Error executing query:", err)
+  }
+
+  rowsAffected, err := res.RowsAffected()
+  if rowsAffected == 0 {
+    fmt.Println("No rows updated. Session ID might not exist.")
+  } else {
+    fmt.Println("Updated", rowsAffected, "row(s).")
+  }
+
+}
+
+func GetUser(db *sql.DB, sessionID string) wc.UserContext{
+  query := `SELECT u.name, u.profileImage
+  FROM sessions s
+  JOIN users u ON s.UserID = u.id
+  WHERE s.id = ?;`
+  
+  row := db.QueryRow(query, sessionID)
+
+  var name string
+  var image string
+
+  err := row.Scan(&name, &image)
+  if err != nil {
+      log.Fatal(err)
+  }
+
+  user :=  wc.UserContext{
+    UserName: name,
+    ProfileImage: image,
+  }
+
+  println("INSIDE GET USER")
+  println(name)
+  
+  return user
+
 }
 
 func insertDefaultTags(db *sql.DB){
@@ -404,7 +487,7 @@ func helpterBuildHavingClause(termCount int) string {
 
 type Session struct {
 	ID                string
-	UserID            int
+	UserID            string
 	CreatedAt         int64
 	CurrentPage       int64
   CurrentPageSearch int64
@@ -415,10 +498,12 @@ func CreateSessionsTable(db *sql.DB) {
   query := `
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
+      UserID,
       created_at INTEGER,
       current_page INTEGER,
       current_page_search INTEGER, 
-      searching INTEGER
+      searching INTEGER,
+      FOREIGN KEY (UserID) REFERENCES Users(id)
     );
   `
   _, err := db.Exec(query)
@@ -428,19 +513,23 @@ func CreateSessionsTable(db *sql.DB) {
   fmt.Println("Session Table created successfully!")
 }
 
-func CreateSession(db *sql.DB) (string, error) {
+func CreateSession(db *sql.DB) (string) {
 	createdAt := time.Now().Unix()
 
   calc := createdAt + 223 + createdAt % 16
 
   sessionID := "se" + strconv.FormatInt(calc, 10) 
 
-  query := `INSERT INTO sessions (id, created_at, current_page, current_page_search, searching) VALUES (?, ?, ?, ?, ?)`
+  query := `INSERT INTO sessions (id, UserID, created_at, current_page, current_page_search, searching) VALUES (?, ?, ?, ?, ?, ?)`
   // FOR searching 
   // 0 = no
   // 1 = yes
-	_, errexec := db.Exec(query, sessionID, createdAt, 1, 1, 0)
-	return sessionID, errexec
+	_, err := db.Exec(query, sessionID, nil, createdAt, 1, 1, 0)
+  if err != nil{
+    println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111")
+    fmt.Println("Error executing query:", err)
+  }
+	return sessionID
 }
 
 func UpdatePageNumSes(db *sql.DB, sessionID string, num int) error {
@@ -509,6 +598,20 @@ func UpdateSearchingStatus(db *sql.DB, sessionID string, status bool) error {
 }
 
 
+func IsLoggedIn(db *sql.DB, sessionID string) bool{
+	query := `SELECT COUNT(UserID) FROM sessions WHERE id = ?`
+	row := db.QueryRow(query, sessionID)
+
+  var num int 
+  row.Scan(&num)
+  println(num)
+  if num == 1 {
+    println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+    return true 
+  }else{
+    return false
+  }
+}
 
 func GetSession(db *sql.DB, sessionID string) (Session, error) {
 	var session Session
@@ -685,9 +788,10 @@ func CreateDB() *sql.DB{
     log.Fatal(err)
   }
 
+  CreateUsersTable(db)
   CreateProductsTable(db)
   CreateTagsTable(db)
-  insertDefaultTags(db)
+  //insertDefaultTags(db)
   CreateTagsForProductTable(db)
   //insertDefaultTags_for_Products(db)
   CreateSessionsTable(db)

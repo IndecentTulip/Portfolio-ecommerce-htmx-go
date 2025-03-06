@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="/css/index.css">
   </head>
   <body id="body">
+    <div>USER INFO {{ .Values.UserName }}</div>
+    <img src="{{ .Values.ProfileImage }}" alt="profile image" style="width: 100px;" onerror="this.onerror=null;this.src='https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740'" >
+
     {{ template "navbar" . }}
 
     {{ template "cart" . }}

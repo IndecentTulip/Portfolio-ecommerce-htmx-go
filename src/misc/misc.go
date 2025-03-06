@@ -6,7 +6,7 @@ import (
 	db "htmxNpython/db_creation"
 )
 
-func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageContext) wc.GlobalContext{
+func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageContext, user wc.UserContext) wc.GlobalContext{
   const ITEMS_PER_PAGE = 20 
   var productsList []wc.Product
   var PRODUCTNUM int 
@@ -26,7 +26,9 @@ func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageCont
     nextProductsNums = GetNextProductNums(session,PRODUCTNUM,false,searchTerm)
   }
  
-  return wc.GenerateGlobalContext(session, page, productsList, nextProductsNums, CreateCurentCart(sqldb,session.SessionID)) 
+  return wc.GenerateGlobalContext(
+    productsList, nextProductsNums, CreateCurentCart(sqldb,session.SessionID),
+    session, page, user) 
 }
 
 func CreateCurentCart(sqldb *sql.DB, token string) []wc.CartItem{

@@ -28,6 +28,11 @@ type SessionContext struct {
   SessionID string
   CurrentPage int
 }
+type UserContext struct {
+  UserID string
+  UserName string
+  ProfileImage string
+}
 
 type GlobalContext struct {
 	Values       map[string]interface{}
@@ -36,7 +41,12 @@ type GlobalContext struct {
   CartList      []CartItem
 }
 
-func GenerateGlobalContext(session SessionContext, page PageContext, productList []Product, strip []int, cartList []CartItem ) GlobalContext {
+func GenerateGlobalContext(
+  productList []Product, strip []int, cartList []CartItem,
+  session SessionContext, page PageContext, user UserContext,
+  //args ...interface{},
+) GlobalContext {
+
   context := GlobalContext{
     ProductsList: productList,
     NextProductsNums: strip,
@@ -44,20 +54,39 @@ func GenerateGlobalContext(session SessionContext, page PageContext, productList
     Values: make(map[string]interface{}),
   }
 
+  // TODO HARD CODE LOOPS INSDEAD OF sessionVal.NumField(); 
+  //for _, arg := range args {
+  //  val := reflect.ValueOf(arg)
+  //
+  //  for i := 0; i < val.NumField(); i++ {
+  //    fieldName := val.Type().Field(i).Name
+  //    fieldValue := val.Field(i).Interface()
+  //
+  //    context.Values[fieldName] = fieldValue
+  //  }
+  //}
 	sessionVal := reflect.ValueOf(session)
-
+  
 	for i := 0; i < sessionVal.NumField(); i++ {
 		fieldName := sessionVal.Type().Field(i).Name
 		fieldValue := sessionVal.Field(i).Interface()
-
+  
     context.Values[fieldName] = fieldValue
 	}
 	pageVal := reflect.ValueOf(page)
-
+  
 	for i := 0; i < pageVal.NumField(); i++ {
 		fieldName := pageVal.Type().Field(i).Name
 		fieldValue := pageVal.Field(i).Interface()
-
+  
+    context.Values[fieldName] = fieldValue
+	}
+	userVal := reflect.ValueOf(user)
+  
+	for i := 0; i < userVal.NumField(); i++ {
+		fieldName := userVal.Type().Field(i).Name
+		fieldValue := userVal.Field(i).Interface()
+  
     context.Values[fieldName] = fieldValue
 	}
 
