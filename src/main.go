@@ -547,14 +547,14 @@ func main(){
       sessionID = strings.Replace(sessionID, "session=", "",1)
     }
 
-    user := wc.UserContext{
+    userContext := wc.UserContext{
       UserName: userInfo["name"].(string),
       UserID: userInfo["sub"].(string),
       ProfileImage: userInfo["picture"].(string),
     }
 
-    db.InsertIntoUser(sqldb, user)
-    db.UpdateUserSes(sqldb,sessionID,user.UserID)
+    db.InsertIntoUser(sqldb, userContext)
+    db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
     return c.Redirect(http.StatusSeeOther, "http://localhost:25258/")
@@ -587,7 +587,24 @@ func main(){
       return c.String(http.StatusInternalServerError, "Failed to get user info")
     }
 
-    return c.HTML(http.StatusOK, fmt.Sprintf("<h1>Hello, %s! You are successfully authenticated with GitHub.</h1>", *user.Login))
+    sessionID := c.Request().Header.Get("Cookie")
+    if sessionID == ""{
+    }else{
+      sessionID = strings.Replace(sessionID, "session=", "",1)
+    }
+
+    userContext := wc.UserContext{
+      UserName: *user.Login,
+      UserID: strconv.FormatInt(user.GetID(), 10),
+      ProfileImage: *user.AvatarURL,
+    }
+
+    db.InsertIntoUser(sqldb, userContext)
+    db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
+    println("CALLED UpdateUserSes")
+
+    return c.Redirect(http.StatusSeeOther, "http://localhost:25258/")
+
     });
 
   e.Logger.Fatal(e.Start(":25258"))
