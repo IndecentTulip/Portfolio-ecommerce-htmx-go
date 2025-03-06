@@ -296,9 +296,7 @@ func main(){
       SearchTerm: searchTerm,
     }
 
-    println("HELLO 2")
     webContext := m.NewGlobalContext(sqldb,ses,pag)
-    println("HELLO 3")
 
     template := "products"
     if loadIndex {
@@ -314,7 +312,8 @@ func main(){
   });
 
   e.PUT("/addtocart", func(c echo.Context) error {
-
+    // WE CAN GET THE SESSION 
+    // AND THE ITEM ID FROM THIS REQUEST
     productID := c.QueryParam("id")
     fmt.Println("!!!! API /addtocart !!!!")
     fmt.Println(productID)
@@ -325,10 +324,13 @@ func main(){
     }else{
       sessionID = strings.Replace(sessionID, "session=", "",1)
     }
+    fmt.Println("!!!! API /addtocart !!!!")
+    println(sessionID)
 
     db.AddToCart(sqldb,sessionID,productID)
 
-    productInfo,_ := db.SelectCartItem(sqldb,productID)
+    // FIX
+    productInfo := db.SelectCartItem(sqldb,productID,sessionID)
 
     type oobProduct struct{
       CartItem wc.CartItem

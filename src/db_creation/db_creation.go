@@ -659,13 +659,11 @@ func SelectCart_FirstTime(db *sql.DB, userloggedIn bool, sessionID string) []wc.
     row:= db.QueryRow(query, sessionID,sessionID)
     err := row.Scan(&sessionID_OLD)
     if err != nil {
-      println("WTF 1")
       WeGotSessionThatHadThatAccLinked = false
     }else {
       WeGotSessionThatHadThatAccLinked = true
     }
 
-    println("WTF 2")
 
     if WeGotSessionThatHadThatAccLinked {
       //[ ] copy that session's cart items to the new session
@@ -771,7 +769,7 @@ func CountFinalPrice(cartItemsList []wc.CartItem) (int) {
 
 
 
-func SelectCartItem(db *sql.DB, productId string) (wc.CartItem, error) {
+func SelectCartItem(db *sql.DB, productId string, sessionID string ) (wc.CartItem) {
     var product wc.CartItem
 
     query := `SELECT 
@@ -782,22 +780,23 @@ func SelectCartItem(db *sql.DB, productId string) (wc.CartItem, error) {
         (p.price * c.quantity) AS total
         FROM cart c
         JOIN products p ON c.ProductId = p.id
-        WHERE c.ProductId = ?`
+        WHERE c.ProductId = ? AND c.SessionID = ?`
 
-    row := db.QueryRow(query, productId)
+    row := db.QueryRow(query, productId, sessionID)
 
     var cartId, name string
     var price, quantity, total int
 
     err := row.Scan(&cartId, &name, &price, &quantity, &total)
     if err != nil {
-      return product, err
+      log.Fatal(err)
+      return product
     }
 
     product.Product = wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity}
     product.CartID = cartId
 
-    return product, nil
+    return product
 }
 
 func AddToCart(db *sql.DB, SessionId string, ProductId string){

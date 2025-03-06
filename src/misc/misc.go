@@ -9,7 +9,6 @@ import (
 func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageContext) wc.GlobalContext{
 
   // USER
-  println("TEST 1")
   userloggedIn := db.IsLoggedIn(sqldb, session.SessionID)
 
   var userContext wc.UserContext
@@ -19,9 +18,7 @@ func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageCont
       ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
     }
   }else{
-    println("TEST 2")
     userContext = db.GetUser(sqldb,session.SessionID) 
-    println("TEST 3")
   } 
   // USER
 
@@ -31,9 +28,7 @@ func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageCont
   const ITEMS_PER_PAGE = 20 // for both PRODUCTSLIST & NEXTPRODUCTSNUMS 
 
   if page.Is_Searching {
-    println("TEST 4")
     productsList,PRODUCTNUM = db.GetProductSearch(sqldb, page.SearchTerm, (page.Next - (ITEMS_PER_PAGE/2)))
-    println("TEST 5")
   }else{
     productsList,PRODUCTNUM = db.GetProductsList(sqldb,(page.Next - (ITEMS_PER_PAGE/2)))
   }
@@ -50,9 +45,7 @@ func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageCont
   }
   // NEXTPRODUCTSNUMS
 
-  println("TEST 6")
   cart := db.SelectCart_FirstTime(sqldb, userloggedIn, session.SessionID)
-  println("TEST 7")
 
   return wc.GenerateGlobalContext(
     productsList, nextProductsNums, cart,
