@@ -385,193 +385,179 @@ func GetProduct(db *sql.DB, prodId string) wc.Product {
 func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
   terms := strings.Split(term, " ")
 
-  termsAmmount := len(terms)
+  //termsAmmount := len(terms)
   var query string
-  var querySET = false
-  var queryNum int // used to determine how many params you should expect
-  // 1 for WHERE
-  // 2 for HAVING
-  // 3 for WHERE + HAVING
+  var numOfTags = 0
+  var numOfDesc = 0
+  paramsForWHERE := make([]interface{}, 0, len(terms)*2)
+  paramsForHAVING := make([]interface{}, 0, len(terms))
+  paramsForHAVING_OR := make([]interface{}, 0, len(terms))
 
   for _, term := range terms{
-    // bool
-    if termsAmmount == 1 {
-      if !(productTagsMap[term]) {
-        // TODO BECAUSE HERE IT'S = 0 you can hard code WHERE
-        query = `
-        SELECT
-            p.id, p.name, p.price, p.desc, p.quantity, p.image,
-            GROUP_CONCAT(pt.tagName) AS tags,
-            COUNT(*) OVER() AS total
-        FROM
-            products p
-        LEFT JOIN
-            productTags pt ON p.id = pt.ProductId
-        LEFT JOIN
-            tags t ON pt.TagName = t.tagName
-        WHERE (` + helpterBuildWhereClause(len(terms)) + `) 
-        GROUP BY
-           p.id
-        ORDER BY price 
-        LIMIT 10
-        OFFSET ?
-        `
-        querySET = true
-        queryNum = 1
-      }else{ // i = 0
-        // TODO BECAUSE HERE IT'S = 0 you can hard code HAVING
-        query = `
-        SELECT 
-            p.id, p.name, p.price, p.desc, p.quantity, p.image,
-            GROUP_CONCAT(pt.tagName) AS tags,
-            COUNT(*) OVER() AS total
-        FROM 
-            products p
-        LEFT JOIN 
-            productTags pt ON p.id = pt.ProductId
-        LEFT JOIN
-            tags t ON pt.TagName = t.tagName
-        GROUP BY 
-           p.id
-        HAVING (` + helpterBuildHavingClause(len(terms)) + `)
-        ORDER BY price 
-        LIMIT 10
-        OFFSET ?
-        `
-        querySET = true
-        queryNum = 2
-      }
-    // i = 0
-    }else{  
-      if !(productTagsMap[term]) {
-        query = `
-        WITH intersected AS (
-          SELECT 
-              p.id, 
-              p.name, 
-              p.price, 
-              p.desc, 
-              p.quantity, 
-              p.image,
-              GROUP_CONCAT(pt.tagName) AS tags
-          FROM 
-              products p
-          LEFT JOIN 
-              productTags pt ON p.id = pt.ProductId
-          LEFT JOIN
-              tags t ON pt.TagName = t.tagName
-          WHERE (` + helpterBuildWhereClause(len(terms)) + `)
-          GROUP BY p.id
-        
-          UNION
-        
-          SELECT 
-              p.id, 
-              p.name, 
-              p.price, 
-              p.desc, 
-              p.quantity, 
-              p.image,
-              GROUP_CONCAT(pt.tagName) AS tags
-          FROM 
-              products p
-          LEFT JOIN 
-              productTags pt ON p.id = pt.ProductId
-          LEFT JOIN
-              tags t ON pt.TagName = t.tagName
-          GROUP BY p.id
-          HAVING (` + helpterBuildHavingClause(len(terms)) + `)
-        )
-        SELECT 
-            *,
-            COUNT(*) OVER() AS total
-        FROM intersected
-        ORDER BY price 
-        LIMIT 10
-        OFFSET ?;
-        `
-        // INTERSECT ??
-        querySET = true
-        queryNum = 3
-      }// if !=
-    } // else for == 0
-  } // for loop
-  if querySET == false {
+    if productTagsMap[term] {
+      numOfTags++
+      term = "%" + term + "%"
+      paramsForHAVING = append(paramsForHAVING, term)
+    }else{
+      numOfDesc++
+      term = "%" + term + "%"
+      paramsForWHERE = append(paramsForWHERE, term, term)
+      paramsForHAVING_OR = append(paramsForHAVING_OR, term)
+      // all the searched related to desc + not fully spelled tags
+    }
+  } 
+  if ((numOfDesc >= 1) && (numOfTags >= 1)) {
+    // TODO REPLACE UNION WITH LEFT/RIGHT UNION
+    // SEARCH THOUGH TAGS, DESC, AND THINGS THAT WHERE INTENDED AS TAGS
+    query = `
+    WITH intersected AS (
+      SELECT 
+        p.id, 
+        p.name, 
+        p.price, 
+        p.desc, 
+        p.quantity, 
+        p.image,
+        GROUP_CONCAT(pt.tagName) AS tags
+      FROM 
+        products p
+      LEFT JOIN 
+        productTags pt ON p.id = pt.ProductId
+      LEFT JOIN
+        tags t ON pt.TagName = t.tagName
+      WHERE (` + helperBuildWhereClause(numOfDesc) + `)
+      GROUP BY 
+        p.id
+    
+      INTERSECT
+    
+      SELECT 
+        p.id, 
+        p.name, 
+        p.price, 
+        p.desc, 
+        p.quantity, 
+        p.image,
+        GROUP_CONCAT(pt.tagName) AS tags
+      FROM 
+        products p
+      LEFT JOIN 
+        productTags pt ON p.id = pt.ProductId
+      LEFT JOIN
+        tags t ON pt.TagName = t.tagName
+      GROUP BY 
+        p.id
+      HAVING (` + helperBuildHavingClauseAND(numOfTags) + ` OR ` + helperBuildHavingClauseOR(numOfDesc) +  `)
+    )
+    SELECT 
+      *,
+      COUNT(*) OVER() AS total
+    FROM intersected
+    ORDER BY price 
+    LIMIT 10
+    OFFSET ?;
+    `
+  }else if numOfTags >= 1 {
+    // SEARCH THOUGH TAGS
     query = `
     SELECT 
-        p.id, p.name, p.price, p.desc, p.quantity, p.image,
-        GROUP_CONCAT(pt.tagName) AS tags,
-        COUNT(*) OVER() AS total
+      p.id, p.name, p.price, p.desc, p.quantity, p.image,
+      GROUP_CONCAT(pt.tagName) AS tags,
+      COUNT(*) OVER() AS total
     FROM 
-        products p
+      products p
     LEFT JOIN 
-        productTags pt ON p.id = pt.ProductId
+      productTags pt ON p.id = pt.ProductId
     LEFT JOIN
-        tags t ON pt.TagName = t.tagName
+      tags t ON pt.TagName = t.tagName
     GROUP BY 
-       p.id
-    HAVING (` + helpterBuildHavingClause(len(terms)) + `)
+      p.id
+    HAVING (` + helperBuildHavingClauseAND(numOfTags) + `)
     ORDER BY price 
     LIMIT 10
     OFFSET ?
     `
-    querySET = true
-    queryNum = 2
+  }else{
+    // TODO REPLACE UNION WITH LEFT/RIGHT UNION
+    // SEARCH THOUGH DESC AND CHECK IF USER MEANT TO TYPE A TAG
+    query = `
+    WITH intersected AS (
+      SELECT 
+        p.id, 
+        p.name, 
+        p.price, 
+        p.desc, 
+        p.quantity, 
+        p.image,
+        GROUP_CONCAT(pt.tagName) AS tags
+      FROM 
+        products p
+      LEFT JOIN 
+        productTags pt ON p.id = pt.ProductId
+      LEFT JOIN
+        tags t ON pt.TagName = t.tagName
+      WHERE (` + helperBuildWhereClause(numOfDesc) + `)
+      GROUP BY p.id
+    
+      UNION
+    
+      SELECT 
+        p.id, 
+        p.name, 
+        p.price, 
+        p.desc, 
+        p.quantity, 
+        p.image,
+        GROUP_CONCAT(pt.tagName) AS tags
+      FROM 
+        products p
+      LEFT JOIN 
+        productTags pt ON p.id = pt.ProductId
+      LEFT JOIN
+        tags t ON pt.TagName = t.tagName
+      GROUP BY p.id
+      HAVING (` + helperBuildHavingClauseOR(numOfDesc) + ` )
+    )
+    SELECT 
+      *,
+      COUNT(*) OVER() AS total
+    FROM intersected
+    ORDER BY price 
+    LIMIT 10
+    OFFSET ?;
+    `
   }
+  
 
-  println("helper for WHERE")
-  println(helpterBuildWhereClause(termsAmmount))
-  println("helper for HAVING")
-  println(helpterBuildHavingClause(termsAmmount))
-  println("LEN IS ")
-  println(termsAmmount)
-  println("the final query")
-  fmt.Println(query)
+  //println("helper for WHERE")
+  //println(helperBuildWhereClause(numOfDesc))
+  //println("helper for HAVING")
+  //println(helperBuildHavingClauseAND(numOfTags))
+  //println(helperBuildHavingClauseOR(numOfDesc))
+  //println("LEN IS ")
+  //println(termsAmmount)
+  //println("numOfDesc")
+  //println(numOfDesc)
+  //println("numOfTags")
+  //println(numOfTags)
+  //println("the final query")
+  //fmt.Println(query)
 
 
   var params []interface{}
-  if queryNum == 1{
-    paramsfForWHERE := make([]interface{}, 0, len(terms)*2)
-    for _, term := range terms {
-        term = "%" + term + "%"
-        paramsfForWHERE = append(paramsfForWHERE, term, term)
-    }
-    params = paramsfForWHERE
-  }
-  if queryNum == 2{
-    paramsfForHAVING := make([]interface{}, 0, len(terms))
-    for _, term := range terms {
-        term = "%" + term + "%"
-        paramsfForHAVING = append(paramsfForHAVING, term)
-    }
-
-    params = paramsfForHAVING
-  }
-  if queryNum == 3{
-    paramsfForWHERE := make([]interface{}, 0, len(terms)*2)
-    paramsfForHAVING := make([]interface{}, 0, len(terms))
-    for _, term := range terms {
-        term = "%" + term + "%"
-        paramsfForWHERE = append(paramsfForWHERE, term, term)
-    }
-    for _, term := range terms {
-        term = "%" + term + "%"
-        paramsfForHAVING = append(paramsfForHAVING, term)
-    }
-    params = append(paramsfForWHERE, paramsfForHAVING...)
-  }
+  params = append(paramsForWHERE, paramsForHAVING...)
+  params = append(params, paramsForHAVING_OR...)
 
   params = append(params, offset)
 
-  println("THIS IS PARAMS")
- 
-  for _, param := range params {
-      fmt.Println(param)
-  }
+  //println("THIS IS PARAMS")
+  //
+  //for _, param := range params {
+  //    fmt.Println(param)
+  //}
 
   var searchProductList []wc.Product
 
-  println("TEST 1")
   rows, err := db.Query(query, params...)
   if err != nil {
     log.Fatal(err)
@@ -611,7 +597,7 @@ func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
 
 }
 
-func helpterBuildWhereClause(termCount int) string{
+func helperBuildWhereClause(termCount int) string{
   var clauses []string
 
   // Add conditions for 'name' and 'desc'
@@ -622,16 +608,25 @@ func helpterBuildWhereClause(termCount int) string{
   return strings.Join(clauses, " OR ")
 
 }
-
-func helpterBuildHavingClause(termCount int) string {
+func helperBuildHavingClauseAND(termCount int) string {
   var clauses []string
 
   for i := 0; i < termCount; i++ {
     clauses = append(clauses, "(GROUP_CONCAT(t.tagName) LIKE ?)")
   }
 
-  return strings.Join(clauses, " OR ")
+  return strings.Join(clauses, " AND ")
 }
+func helperBuildHavingClauseOR(termCount int) string {
+  var clauses []string
+
+  for i := 0; i < termCount; i++ {
+    clauses = append(clauses, "(GROUP_CONCAT(t.tagName) LIKE ?)")
+  }
+  return strings.Join(clauses, " OR ") 
+}
+
+
 
 type Session struct {
 	ID                string

@@ -398,7 +398,6 @@ func main(){
       CartList []wc.CartItem
     }
 
-    fmt.Println("TEST")
     product :=  db.GetProduct(sqldb,productId)
     //session := wc.NewSessionContext(sqldb, sessionID, 0)
 
