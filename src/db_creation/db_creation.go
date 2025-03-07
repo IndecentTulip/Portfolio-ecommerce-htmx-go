@@ -17,6 +17,34 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 )
+var productTags = [60]string{
+  "electronics", "clothing", "home-appliances", "books", "furniture",
+  "sports", "toys", "automotive", "new-arrival", "best-seller",
+  "limited-edition", "exclusive", "eco-friendly", "handmade", "premium",
+  "affordable", "summer-sale", "winter-collection", "black-friday",
+  "holiday-special", "back-to-school", "sale", "clearance", "discounted",
+  "buy-one-get-one", "free-shipping", "flash-deal", "new", "refurbished",
+  "used", "vintage", "open-box", "kids", "adults", "women", "men", "seniors",
+  "unisex", "nike", "samsung", "apple", "sony", "adidas", "puma", "lego",
+  "durable", "lightweight", "waterproof", "ergonomic", "energy-efficient",
+  "fast-charging", "multi-purpose", "high-performance", "red", "blue", "black",
+  "white", "modern", "minimalistic", "classic",
+}
+var productTagsMap = map[string]bool{
+  "electronics": true, "clothing": true, "home-appliances": true, "books": true, "furniture": true,
+  "sports": true, "toys": true, "automotive": true, "new-arrival": true, "best-seller": true,
+  "limited-edition": true, "exclusive": true, "eco-friendly": true, "handmade": true, "premium": true,
+  "affordable": true, "summer-sale": true, "winter-collection": true, "black-friday": true,
+  "holiday-special": true, "back-to-school": true, "sale": true, "clearance": true, "discounted": true,
+  "buy-one-get-one": true, "free-shipping": true, "flash-deal": true, "new": true, "refurbished": true,
+  "used": true, "vintage": true, "open-box": true, "kids": true, "adults": true, "women": true,
+  "men": true, "seniors": true, "unisex": true, "nike": true, "samsung": true, "apple": true,
+  "sony": true, "adidas": true, "puma": true, "lego": true, "durable": true, "lightweight": true,
+  "waterproof": true, "ergonomic": true, "energy-efficient": true, "fast-charging": true,
+  "multi-purpose": true, "high-performance": true, "red": true, "blue": true, "black": true,
+  "white": true, "modern": true, "minimalistic": true, "classic": true,
+}
+
 
 func CreateUsersTable(db *sql.DB) {
   query := `
@@ -152,19 +180,6 @@ func GetUser(db *sql.DB, sessionID string) wc.UserContext{
 
 func insertDefaultTags(db *sql.DB){
   query := `INSERT INTO tags (tagname) VALUES (?)`
-  productTags := []string{
-        "electronics", "clothing", "home-appliances", "books", "furniture",
-        "sports", "toys", "automotive", "new-arrival", "best-seller",
-        "limited-edition", "exclusive", "eco-friendly", "handmade", "premium",
-        "affordable", "summer-sale", "winter-collection", "black-friday",
-        "holiday-special", "back-to-school", "sale", "clearance", "discounted",
-        "buy-one-get-one", "free-shipping", "flash-deal", "new", "refurbished",
-        "used", "vintage", "open-box", "kids", "adults", "women", "men", "seniors",
-        "unisex", "nike", "samsung", "apple", "sony", "adidas", "puma", "lego",
-        "durable", "lightweight", "waterproof", "ergonomic", "energy-efficient",
-        "fast-charging", "multi-purpose", "high-performance", "red", "blue", "black",
-        "white", "modern", "minimalistic", "classic",
-  }
 
   for _,tag := range(productTags){
     _, err := db.Exec(query, tag)
@@ -369,51 +384,194 @@ func GetProduct(db *sql.DB, prodId string) wc.Product {
 
 func GetProductSearch(db *sql.DB, term string, offset int) ([]wc.Product, int) {
   terms := strings.Split(term, " ")
-  query := `
+
+  termsAmmount := len(terms)
+  var query string
+  var querySET = false
+  var queryNum int // used to determine how many params you should expect
+  // 1 for WHERE
+  // 2 for HAVING
+  // 3 for WHERE + HAVING
+
+  for _, term := range terms{
+    // bool
+    if termsAmmount == 1 {
+      if !(productTagsMap[term]) {
+        // TODO BECAUSE HERE IT'S = 0 you can hard code WHERE
+        query = `
+        SELECT
+            p.id, p.name, p.price, p.desc, p.quantity, p.image,
+            GROUP_CONCAT(pt.tagName) AS tags,
+            COUNT(*) OVER() AS total
+        FROM
+            products p
+        LEFT JOIN
+            productTags pt ON p.id = pt.ProductId
+        LEFT JOIN
+            tags t ON pt.TagName = t.tagName
+        WHERE (` + helpterBuildWhereClause(len(terms)) + `) 
+        GROUP BY
+           p.id
+        ORDER BY price 
+        LIMIT 10
+        OFFSET ?
+        `
+        querySET = true
+        queryNum = 1
+      }else{ // i = 0
+        // TODO BECAUSE HERE IT'S = 0 you can hard code HAVING
+        query = `
+        SELECT 
+            p.id, p.name, p.price, p.desc, p.quantity, p.image,
+            GROUP_CONCAT(pt.tagName) AS tags,
+            COUNT(*) OVER() AS total
+        FROM 
+            products p
+        LEFT JOIN 
+            productTags pt ON p.id = pt.ProductId
+        LEFT JOIN
+            tags t ON pt.TagName = t.tagName
+        GROUP BY 
+           p.id
+        HAVING (` + helpterBuildHavingClause(len(terms)) + `)
+        ORDER BY price 
+        LIMIT 10
+        OFFSET ?
+        `
+        querySET = true
+        queryNum = 2
+      }
+    // i = 0
+    }else{  
+      if !(productTagsMap[term]) {
+        query = `
+        WITH intersected AS (
+          SELECT 
+              p.id, 
+              p.name, 
+              p.price, 
+              p.desc, 
+              p.quantity, 
+              p.image,
+              GROUP_CONCAT(pt.tagName) AS tags
+          FROM 
+              products p
+          LEFT JOIN 
+              productTags pt ON p.id = pt.ProductId
+          LEFT JOIN
+              tags t ON pt.TagName = t.tagName
+          WHERE (` + helpterBuildWhereClause(len(terms)) + `)
+          GROUP BY p.id
+        
+          UNION
+        
+          SELECT 
+              p.id, 
+              p.name, 
+              p.price, 
+              p.desc, 
+              p.quantity, 
+              p.image,
+              GROUP_CONCAT(pt.tagName) AS tags
+          FROM 
+              products p
+          LEFT JOIN 
+              productTags pt ON p.id = pt.ProductId
+          LEFT JOIN
+              tags t ON pt.TagName = t.tagName
+          GROUP BY p.id
+          HAVING (` + helpterBuildHavingClause(len(terms)) + `)
+        )
+        SELECT 
+            *,
+            COUNT(*) OVER() AS total
+        FROM intersected
+        ORDER BY price 
+        LIMIT 10
+        OFFSET ?;
+        `
+        // INTERSECT ??
+        querySET = true
+        queryNum = 3
+      }// if !=
+    } // else for == 0
+  } // for loop
+  if querySET == false {
+    query = `
     SELECT 
-        COUNT(*) OVER() AS total,
         p.id, p.name, p.price, p.desc, p.quantity, p.image,
-        GROUP_CONCAT(pt.tagName) AS tags
+        GROUP_CONCAT(pt.tagName) AS tags,
+        COUNT(*) OVER() AS total
     FROM 
         products p
     LEFT JOIN 
         productTags pt ON p.id = pt.ProductId
     LEFT JOIN
         tags t ON pt.TagName = t.tagName
-    WHERE (` + helpterBuildWhereClause(len(terms)) + `) 
     GROUP BY 
        p.id
-
-UNION
-
-    SELECT 
-        COUNT(*) OVER() AS total,
-        p.id, p.name, p.price, p.desc, p.quantity, p.image,
-        GROUP_CONCAT(pt.tagName) AS tags
-    FROM 
-        products p
-    LEFT JOIN 
-        productTags pt ON p.id = pt.ProductId
-    LEFT JOIN
-        tags t ON pt.TagName = t.tagName
-    GROUP BY 
-       p.id
-    HAVING (` + helpterBuildHavingClause(len(term)) + `)
-
-ORDER BY price 
-LIMIT 10
-OFFSET ?
-`
-
-  params := make([]interface{}, 0, len(terms)*3)
-  for _, term := range terms {
-      term = "%" + term + "%"
-      params = append(params, term, term, term)
+    HAVING (` + helpterBuildHavingClause(len(terms)) + `)
+    ORDER BY price 
+    LIMIT 10
+    OFFSET ?
+    `
+    querySET = true
+    queryNum = 2
   }
+
+  println("helper for WHERE")
+  println(helpterBuildWhereClause(termsAmmount))
+  println("helper for HAVING")
+  println(helpterBuildHavingClause(termsAmmount))
+  println("LEN IS ")
+  println(termsAmmount)
+  println("the final query")
+  fmt.Println(query)
+
+
+  var params []interface{}
+  if queryNum == 1{
+    paramsfForWHERE := make([]interface{}, 0, len(terms)*2)
+    for _, term := range terms {
+        term = "%" + term + "%"
+        paramsfForWHERE = append(paramsfForWHERE, term, term)
+    }
+    params = paramsfForWHERE
+  }
+  if queryNum == 2{
+    paramsfForHAVING := make([]interface{}, 0, len(terms))
+    for _, term := range terms {
+        term = "%" + term + "%"
+        paramsfForHAVING = append(paramsfForHAVING, term)
+    }
+
+    params = paramsfForHAVING
+  }
+  if queryNum == 3{
+    paramsfForWHERE := make([]interface{}, 0, len(terms)*2)
+    paramsfForHAVING := make([]interface{}, 0, len(terms))
+    for _, term := range terms {
+        term = "%" + term + "%"
+        paramsfForWHERE = append(paramsfForWHERE, term, term)
+    }
+    for _, term := range terms {
+        term = "%" + term + "%"
+        paramsfForHAVING = append(paramsfForHAVING, term)
+    }
+    params = append(paramsfForWHERE, paramsfForHAVING...)
+  }
+
   params = append(params, offset)
+
+  println("THIS IS PARAMS")
+ 
+  for _, param := range params {
+      fmt.Println(param)
+  }
 
   var searchProductList []wc.Product
 
+  println("TEST 1")
   rows, err := db.Query(query, params...)
   if err != nil {
     log.Fatal(err)
@@ -424,7 +582,7 @@ OFFSET ?
   var imgByte []byte
 
   for rows.Next() {
-    err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte, &tagsStr)
+    err := rows.Scan(&id, &name, &price, &desc, &quantity, &imgByte, &tagsStr, &total)
     if err != nil {
         log.Fatal(err)
     }
@@ -454,24 +612,25 @@ OFFSET ?
 }
 
 func helpterBuildWhereClause(termCount int) string{
-    var clauses []string
+  var clauses []string
 
-    // Add conditions for 'name' and 'desc'
-    for i := 0; i < termCount; i++ {
-        clauses = append(clauses, "(p.name LIKE ? OR p.desc LIKE ?)")
-    }
+  // Add conditions for 'name' and 'desc'
+  for i := 0; i < termCount; i++ {
+    clauses = append(clauses, "(p.name LIKE ? OR p.desc LIKE ?)")
+  }
 
-    return strings.Join(clauses, " AND ")
+  return strings.Join(clauses, " OR ")
 
 }
 
 func helpterBuildHavingClause(termCount int) string {
-    var clauses []string
+  var clauses []string
 
-    tagClause := "(GROUP_CONCAT(t.tagName) LIKE ?)"
-    clauses = append(clauses, tagClause)
+  for i := 0; i < termCount; i++ {
+    clauses = append(clauses, "(GROUP_CONCAT(t.tagName) LIKE ?)")
+  }
 
-    return strings.Join(clauses, " AND ")
+  return strings.Join(clauses, " OR ")
 }
 
 type Session struct {
