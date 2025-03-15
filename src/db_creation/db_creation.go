@@ -871,6 +871,7 @@ func SelectCart(db *sql.DB, sessionID string) []wc.CartItem {
       p.name,
       p.price,
       c.quantity,
+      p.desc,
       p.image,
       (p.price * c.quantity) AS total
       FROM cart c
@@ -884,12 +885,12 @@ func SelectCart(db *sql.DB, sessionID string) []wc.CartItem {
   }
   defer rows.Close()
 
-  var cartId, productId, name string
+  var cartId, productId, name, desc string
   var price, quantity, total int
   var imgByte []byte
 
   for rows.Next() {
-    err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &imgByte, &total)
+    err := rows.Scan(&cartId, &productId, &name, &price, &quantity, &desc, &imgByte, &total)
     if err != nil {
       log.Fatal(err)
       return nil
@@ -898,7 +899,7 @@ func SelectCart(db *sql.DB, sessionID string) []wc.CartItem {
     imgStr := base64.StdEncoding.EncodeToString(imgByte)
     rowData = append(rowData, 
       wc.CartItem{
-        Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity, Image: imgStr}, 
+        Product: wc.Product{Id: productId, Name: name, Price: price, Quantity: quantity, Desc: desc, Image: imgStr}, 
         CartID: cartId,
         Total: total,
       })

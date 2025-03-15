@@ -26,6 +26,7 @@ import (
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
+	"github.com/stripe/stripe-go/v72/webhook"
 )
 
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
@@ -48,6 +49,7 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
 
 var oauth2Config_Google oauth2.Config
 var oauth2Config_Github oauth2.Config
+var endpointSecret string 
 // made it random
 var oauthStateString = "randomstate"
 
@@ -66,34 +68,41 @@ func init() {
 	if scanner.Scan() {
 		clientIDGoogle = scanner.Text()
 	} else {
-		fmt.Println("No first line found.")
+		fmt.Println("No 1st line found.")
 		return
 	}
 
 	if scanner.Scan() {
 		clientSecretGoogle = scanner.Text()
 	} else {
-		fmt.Println("No second line found.")
+		fmt.Println("No 2nd line found.")
 		return
 	}
 	if scanner.Scan() {
 		clientIDGithub = scanner.Text()
 	} else {
-		fmt.Println("No third line found.")
+		fmt.Println("No 3rd line found.")
 		return
 	}
 	if scanner.Scan() {
 		clientSecretGithub = scanner.Text()
 	} else {
-		fmt.Println("No forth line found.")
+		fmt.Println("No 4th line found.")
 		return
 	}
   if scanner.Scan(){
     stripe.Key = scanner.Text()
   } else {
-		fmt.Println("No fifth line found.")
+		fmt.Println("No 5th line found.")
 		return
 	}
+  if scanner.Scan(){
+    endpointSecret = scanner.Text()
+  } else {
+		fmt.Println("No 6th line found.")
+		return
+  }
+	
 
 
 	if err := scanner.Err(); err != nil {
@@ -103,14 +112,14 @@ func init() {
 	oauth2Config_Google = oauth2.Config{
 		ClientID:     clientIDGoogle,
 		ClientSecret: clientSecretGoogle,
-		RedirectURL:  "http://localhost:25258/callback",
+		RedirectURL:  "http://24.84.74.227:25000/callback",
 		Scopes:       []string{"email", "profile"},   
 		Endpoint:     google.Endpoint,               
 	}
 	oauth2Config_Github = oauth2.Config{
 		ClientID:     clientIDGithub,
 		ClientSecret: clientSecretGithub,
-		RedirectURL:  "http://localhost:25258/callback/github",
+		RedirectURL:  "http://24.84.74.227:25000/callback/github",
 		Scopes:       []string{"read:user", "user:email"},
 		Endpoint:     oauth2.Endpoint{
 			AuthURL:  "https://github.com/login/oauth/authorize",
@@ -135,8 +144,8 @@ func main(){
   // we would be able to use Render func that is made for that Struct
   e.Renderer = tr.NewTemplate()
 
-  e.Static("/static/images", "images")
-  e.Static("/static/css", "css")
+  //e.Static("/static/images", "images")
+  //e.Static("/static/css", "css")
 
   e.GET("/", func(c echo.Context) error {
 
@@ -445,27 +454,31 @@ func main(){
     }
 
     cartInfo := db.SelectCart(sqldb,sessionID)
-    finalPrice := db.CountFinalPrice(cartInfo)
+    var cartStripe []*stripe.CheckoutSessionLineItemParams
 
-    // TODO store finalPrice as a float number
-    fmt.Println(finalPrice)
+    fmt.Println("ITEMS ITEMS ITEMS")
+    for _,item := range cartInfo{
+      var cart_item_for_stripe stripe.CheckoutSessionLineItemParams 
+      cart_item_for_stripe.Name = stripe.String(item.Product.Name)
+      println(item.Product.Desc)
+      cart_item_for_stripe.Description = stripe.String(item.Product.Desc)
+      cart_item_for_stripe.Amount = stripe.Int64(int64(item.Product.Price * 100))
+      cart_item_for_stripe.Currency = stripe.String(string(stripe.CurrencyCAD))
+      cart_item_for_stripe.Quantity = stripe.Int64(int64(item.Product.Quantity))
+      cartStripe = append(cartStripe, &cart_item_for_stripe)
+      fmt.Println(item.Product.Name + " was added")
+    }
+    //finalPrice := db.CountFinalPrice(cartInfo)
+    //fmt.Println(finalPrice)
 
     params := &stripe.CheckoutSessionParams{
       PaymentMethodTypes: stripe.StringSlice([]string{
         "card",
       }),
-      LineItems: []*stripe.CheckoutSessionLineItemParams{
-        {
-          Name:        stripe.String("Product Name"),
-          Description: stripe.String("Description of the product"),
-          Amount:      stripe.Int64(int64(finalPrice * 100)),
-          Currency:    stripe.String(string(stripe.CurrencyCAD)),
-          Quantity:    stripe.Int64(1),
-        },
-      },
+      LineItems: cartStripe,
       Mode:      stripe.String(string(stripe.CheckoutSessionModePayment)),
-      SuccessURL: stripe.String("http://localhost:25258/success"),
-      CancelURL:  stripe.String("http://localhost:25258/"),
+      SuccessURL: stripe.String("http://24.84.74.227:25000/"),
+      CancelURL:  stripe.String("http://24.84.74.227:25000/"),
     }
 
     session, err := session.New(params)
@@ -476,6 +489,39 @@ func main(){
     return c.Redirect(http.StatusSeeOther, session.URL)
 
   });
+
+  e.POST("/st-webhook", func(c echo.Context) error {
+    payload, err := io.ReadAll(c.Request().Body)
+    if err != nil {
+        return c.String(http.StatusBadRequest, "Failed to read webhook payload")
+    }
+
+    sigHeader := c.Request().Header.Get("Stripe-Signature")
+
+    event, err := webhook.ConstructEvent(payload, sigHeader, endpointSecret)
+    if err != nil {
+        return c.String(http.StatusBadRequest, fmt.Sprintf("Webhook signature verification failed: %v", err))
+    }
+
+    // Handle the event
+    switch event.Type {
+    case "charge.succeeded":
+        println("Webhook seccess hit!!!!!!!!!")
+        return c.String(http.StatusOK, "Payment successful, cart updated!")
+    default:
+        println("Webhook default hit")
+        return c.String(http.StatusOK, "Event received")
+    }
+  })
+
+  e.GET("/success", func(c echo.Context) error {
+
+    got,_ := c.FormParams()   
+
+    return c.String(200, fmt.Sprintf("it was successfull we got: ", got))
+
+  });
+
 
   e.GET("/login", func(c echo.Context) error {
 
@@ -541,7 +587,7 @@ func main(){
     db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
-    return c.Redirect(http.StatusSeeOther, "http://localhost:25258/")
+    return c.Redirect(http.StatusSeeOther, "http://24.84.74.227:25000/")
   });
 
   e.GET("/callback/github", func(c echo.Context) error {
@@ -587,9 +633,9 @@ func main(){
     db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
-    return c.Redirect(http.StatusSeeOther, "http://localhost:25258/")
+    return c.Redirect(http.StatusSeeOther, "http://24.84.74.227:25000/")
 
     });
 
-  e.Logger.Fatal(e.Start(":25258"))
+  e.Logger.Fatal(e.Start(":25000"))
 }
