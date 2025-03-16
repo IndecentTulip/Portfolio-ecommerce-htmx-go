@@ -987,6 +987,15 @@ func DeleteFromCart(db *sql.DB, cartId string){
     log.Fatal(err)
   }
 }
+func DeleteCart(db *sql.DB, sessionID string){
+
+  query := `DELETE FROM cart WHERE SessionId = ?`
+
+	_, err := db.Exec(query, sessionID)
+  if err != nil {
+    log.Fatal(err)
+  }
+}
 
 
 func CreateDB() *sql.DB{

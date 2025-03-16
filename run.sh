@@ -28,6 +28,9 @@ echo "<><><><><><><><><><>"
 echo "provide secret key"
 read stipekey
 echo "$stipekey" >> ./src/authcred.txt
+echo "endpoint secret for webhook"
+read webhooksecret
+echo "$webhooksecret" >> ./src/authcred.txt
 
 
 cd ./src/

@@ -26,7 +26,6 @@ import (
 
 	"github.com/stripe/stripe-go/v72"
 	"github.com/stripe/stripe-go/v72/checkout/session"
-	"github.com/stripe/stripe-go/v72/webhook"
 )
 
 func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
@@ -112,14 +111,14 @@ func init() {
 	oauth2Config_Google = oauth2.Config{
 		ClientID:     clientIDGoogle,
 		ClientSecret: clientSecretGoogle,
-		RedirectURL:  "http://24.84.74.227:25000/callback",
+		RedirectURL:  "http://portfolio.serverpit.com:25000/callback",
 		Scopes:       []string{"email", "profile"},   
 		Endpoint:     google.Endpoint,               
 	}
 	oauth2Config_Github = oauth2.Config{
 		ClientID:     clientIDGithub,
 		ClientSecret: clientSecretGithub,
-		RedirectURL:  "http://24.84.74.227:25000/callback/github",
+		RedirectURL:  "http://portfolio.serverpit.com:25000/callback/github",
 		Scopes:       []string{"read:user", "user:email"},
 		Endpoint:     oauth2.Endpoint{
 			AuthURL:  "https://github.com/login/oauth/authorize",
@@ -399,10 +398,23 @@ func main(){
     fmt.Println(productId)
     fmt.Println(sessionID)
 
+    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
+
+    var userContext wc.UserContext
+    if !userloggedIn{
+      userContext = wc.UserContext{
+        UserName: "test",
+        ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
+      }
+    }else{
+      userContext = db.GetUser(sqldb,sessionID) 
+    } 
+
     type WebContext struct{
       Product wc.Product
       Values struct{
         SessionID string
+        User wc.UserContext 
       }
       CartList []wc.CartItem
     }
@@ -413,8 +425,9 @@ func main(){
     cartList := db.SelectCart(sqldb,sessionID)
     webContext := WebContext{
       Product: product,
-      Values: struct{SessionID string}{
+      Values: struct{SessionID string; User wc.UserContext}{
         SessionID: sessionID,
+        User: userContext,
       },
       CartList: cartList,
     }
@@ -456,7 +469,6 @@ func main(){
     cartInfo := db.SelectCart(sqldb,sessionID)
     var cartStripe []*stripe.CheckoutSessionLineItemParams
 
-    fmt.Println("ITEMS ITEMS ITEMS")
     for _,item := range cartInfo{
       var cart_item_for_stripe stripe.CheckoutSessionLineItemParams 
       cart_item_for_stripe.Name = stripe.String(item.Product.Name)
@@ -466,10 +478,10 @@ func main(){
       cart_item_for_stripe.Currency = stripe.String(string(stripe.CurrencyCAD))
       cart_item_for_stripe.Quantity = stripe.Int64(int64(item.Product.Quantity))
       cartStripe = append(cartStripe, &cart_item_for_stripe)
-      fmt.Println(item.Product.Name + " was added")
     }
     //finalPrice := db.CountFinalPrice(cartInfo)
     //fmt.Println(finalPrice)
+
 
     params := &stripe.CheckoutSessionParams{
       PaymentMethodTypes: stripe.StringSlice([]string{
@@ -477,14 +489,20 @@ func main(){
       }),
       LineItems: cartStripe,
       Mode:      stripe.String(string(stripe.CheckoutSessionModePayment)),
-      SuccessURL: stripe.String("http://24.84.74.227:25000/"),
-      CancelURL:  stripe.String("http://24.84.74.227:25000/"),
+      SuccessURL: stripe.String("http://portfolio.serverpit.com:25000/"),
+      CancelURL:  stripe.String("http://portfolio.serverpit.com:25000/"),
+      PaymentIntentData: &stripe.CheckoutSessionPaymentIntentDataParams{
+        Metadata: map[string]string{
+          "session_id": sessionID,
+        },
+      },
     }
 
     session, err := session.New(params)
     if err != nil {
       return c.String(http.StatusInternalServerError, fmt.Sprintf("Failed to create session: %v", err))
     }
+
 
     return c.Redirect(http.StatusSeeOther, session.URL)
 
@@ -493,24 +511,45 @@ func main(){
   e.POST("/st-webhook", func(c echo.Context) error {
     payload, err := io.ReadAll(c.Request().Body)
     if err != nil {
-        return c.String(http.StatusBadRequest, "Failed to read webhook payload")
+      return c.String(http.StatusBadRequest, "Failed to read webhook payload")
     }
 
-    sigHeader := c.Request().Header.Get("Stripe-Signature")
+    //sigHeader := c.Request().Header.Get("Stripe-Signature")
 
-    event, err := webhook.ConstructEvent(payload, sigHeader, endpointSecret)
-    if err != nil {
-        return c.String(http.StatusBadRequest, fmt.Sprintf("Webhook signature verification failed: %v", err))
+    event := stripe.Event{}
+
+    if err := json.Unmarshal(payload, &event); err != nil {
+      return c.String(http.StatusBadRequest, fmt.Sprintf("Failed to parse webhook body json: %v", err))
     }
 
-    // Handle the event
+    //event, err = webhook.ConstructEvent(payload, sigHeader, endpointSecret)
+    //if err != nil {
+    //  return c.String(http.StatusBadRequest, fmt.Sprintf("Webhook signature verification failed: %v", err))
+    //}
+
+    fmt.Println(event)
+    fmt.Println(event.Type)
+    //sessionID := session.Metadata["session_id"]
+    //fmt.Println("Session ID:", sessionID)
+
     switch event.Type {
     case "charge.succeeded":
-        println("Webhook seccess hit!!!!!!!!!")
-        return c.String(http.StatusOK, "Payment successful, cart updated!")
+      println("Webhook seccess hit!!!!!!!!!")
+      var paymentIntent stripe.PaymentIntent
+      err := json.Unmarshal(event.Data.Raw, &paymentIntent)
+      if err != nil {
+        fmt.Fprintf(os.Stderr, "Error parsing webhook JSON: %v\n", err)
+      }
+      sessionID := paymentIntent.Metadata["session_id"]
+      
+      println("HEY HEY HEY HEY HEY HEY HEY HEY HEY HEY")
+      println(sessionID)
+      db.DeleteCart(sqldb, sessionID)
+      println("Webhook seccess hit!!!!!!!!!")
+      return c.String(http.StatusOK, "Payment successful, cart updated!")
     default:
-        println("Webhook default hit")
-        return c.String(http.StatusOK, "Event received")
+      println("Webhook default hit")
+      return c.String(http.StatusOK, "Event received")
     }
   })
 
@@ -587,7 +626,7 @@ func main(){
     db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
-    return c.Redirect(http.StatusSeeOther, "http://24.84.74.227:25000/")
+    return c.Redirect(http.StatusSeeOther, "http://portfolio.serverpit.com:25000/")
   });
 
   e.GET("/callback/github", func(c echo.Context) error {
@@ -633,7 +672,7 @@ func main(){
     db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
-    return c.Redirect(http.StatusSeeOther, "http://24.84.74.227:25000/")
+    return c.Redirect(http.StatusSeeOther, "http://portfolio.serverpit.com:25000/")
 
     });
 
