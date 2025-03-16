@@ -188,6 +188,7 @@ func main(){
 
     _,PRODUCTNUM := db.GetProductsList(sqldb,start)
 
+    println("HELLO?")
     var more = newStart <= PRODUCTNUM
   
     loadIndex := false
@@ -214,6 +215,7 @@ func main(){
     
     webContext := m.NewGlobalContext(sqldb,ses,pag)
 
+    println("HELLO?")
     template := "products"
     if loadIndex {
       template = "index"
@@ -514,23 +516,11 @@ func main(){
       return c.String(http.StatusBadRequest, "Failed to read webhook payload")
     }
 
-    //sigHeader := c.Request().Header.Get("Stripe-Signature")
-
     event := stripe.Event{}
 
     if err := json.Unmarshal(payload, &event); err != nil {
       return c.String(http.StatusBadRequest, fmt.Sprintf("Failed to parse webhook body json: %v", err))
     }
-
-    //event, err = webhook.ConstructEvent(payload, sigHeader, endpointSecret)
-    //if err != nil {
-    //  return c.String(http.StatusBadRequest, fmt.Sprintf("Webhook signature verification failed: %v", err))
-    //}
-
-    fmt.Println(event)
-    fmt.Println(event.Type)
-    //sessionID := session.Metadata["session_id"]
-    //fmt.Println("Session ID:", sessionID)
 
     switch event.Type {
     case "charge.succeeded":
@@ -544,6 +534,7 @@ func main(){
       
       println("HEY HEY HEY HEY HEY HEY HEY HEY HEY HEY")
       println(sessionID)
+      db.DeleteFromProducts(sqldb, sessionID)
       db.DeleteCart(sqldb, sessionID)
       println("Webhook seccess hit!!!!!!!!!")
       return c.String(http.StatusOK, "Payment successful, cart updated!")

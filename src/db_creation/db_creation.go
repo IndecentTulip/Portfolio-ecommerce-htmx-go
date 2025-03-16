@@ -1,11 +1,11 @@
 package db_creation
 
 import (
-	"math/rand"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -178,7 +178,7 @@ func GetUser(db *sql.DB, sessionID string) wc.UserContext{
 
 }
 
-func insertDefaultTags(db *sql.DB){
+func InsertDefaultTags(db *sql.DB){
   query := `INSERT INTO tags (tagname) VALUES (?)`
 
   for _,tag := range(productTags){
@@ -191,7 +191,7 @@ func insertDefaultTags(db *sql.DB){
   fmt.Println("default Tags created")
 }
 
-func insertIntoProducts(db *sql.DB) {
+func InsertIntoProducts(db *sql.DB) {
   checkQuery := `SELECT COUNT(*) FROM products`
 
   row := db.QueryRow(checkQuery)
@@ -228,7 +228,21 @@ func insertIntoProducts(db *sql.DB) {
   fmt.Println("Data inserted successfully!")
 }
 
-func insertDefaultTags_for_Products(db *sql.DB){
+func DeleteFromProducts(db *sql.DB, sessionID string ){
+  deletequery := `DELETE FROM products WHERE id = ?`
+  cartItems := SelectCart(db,sessionID)
+  for _,item := range cartItems{
+    fmt.Println("HELLO I AM TRYING TO DELETE: " + item.Product.Id)
+    _, err := db.Exec(deletequery, item.Product.Id)
+    if err != nil {
+      log.Fatal(err)
+    }
+  
+  }
+
+}
+
+func InsertDefaultTags_for_Products(db *sql.DB){
 	productsQuery := "SELECT id FROM products"
 	rows, err := db.Query(productsQuery)
 	if err != nil {
@@ -292,6 +306,7 @@ func insertDefaultTags_for_Products(db *sql.DB){
 }
 
 func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
+  println("TEST")
   query := `
     SELECT 
         COUNT(*) OVER() AS total,
@@ -320,6 +335,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
   var price, total, quantity int
   var imgByte []byte
 
+  println("TEST 2")
   for rows.Next() {
     err := rows.Scan(&total, &id, &name, &price, &desc, &quantity, &imgByte, &tagsStr)
     if err != nil {
@@ -341,6 +357,7 @@ func GetProductsList(db *sql.DB,  offset int) ([]wc.Product, int) {
       Tags: tags,
     })
   }
+  println("TEST 3")
   println("product list total:")
   println(total)
 
@@ -997,25 +1014,12 @@ func DeleteCart(db *sql.DB, sessionID string){
   }
 }
 
-
 func CreateDB() *sql.DB{
 
   db, err := sql.Open("sqlite3", "../database/products.db")
   if err != nil{
     log.Fatal(err)
   }
-
-  CreateUsersTable(db)
-  CreateProductsTable(db)
-  CreateTagsTable(db)
-  //insertDefaultTags(db)
-  CreateTagsForProductTable(db)
-  //insertDefaultTags_for_Products(db)
-  CreateSessionsTable(db)
-  CreateCartTable(db)
-  insertIntoProducts(db)
-
-  
 
   return db
 }
