@@ -1,8 +1,9 @@
+
 {{ block "products" . }}
 
-  {{ range .ProductsList }}
-    {{ template "product" . }}
-  {{ end }}
+    {{ range .ProductsList }}
+      {{ template "product" . }}
+    {{ end }}
 
   {{ if .Values.More }}
     {{ if .Values.Is_Searching}}
@@ -10,65 +11,54 @@
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
         hx-get="/search?start={{ .Values.Next }}&search={{ .Values.SearchTerm }}"
-      ></div>
-
+        class="text-center p-4 bg-gray-200 rounded-lg shadow-md cursor-pointer hover:bg-gray-300 transition"
+      >
+        Load more results...
+      </div>
     {{ else }}
       <div 
         hx-trigger="revealed"
         hx-swap="outerHTML scroll:top"
         hx-get="/?start={{ .Values.Next }}"
-      ></div>
+        class="text-center p-4 bg-gray-200 rounded-lg shadow-md cursor-pointer hover:bg-gray-300 transition"
+      >
+        Load more products...
+      </div>
     {{ end }}
-
-
   {{ end }}
- 
-  <div id="nextpage">
-    {{ template "nextpage" .}}
-  </div>
-
-</div>
 {{ end }}
-<!--
-ProductsList
-  >
-  []Product
-    > 
-    Id 
-    Name
-    Price
-    Desc
--->
-{{ block "product" . }}
-<div class="Product"
-  id="product-{{ .Id }}"
->
-  <hr />
-  <a href="/p/{{ .Id }}">
-    <div><img style="width: 200px;" src="data:image/png;base64,{{.Image}}" alt="Product Image"/></div>
-    <p>Prod Name: {{ .Name }}</p>
-    <p>Description: {{ .Desc }}</p>
-    <p>Price: {{ .Price}}</p>
-    <p>Stock: {{ .Quantity}}</p>
 
+{{ block "product" . }}
+<div class="p-4 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all" id="product-{{ .Id }}">
+  <a href="/p/{{ .Id }}" class="block">
+    <div class="flex justify-center mb-4">
+      <img src="data:image/png;base64,{{.Image}}" alt="Product Image" class="w-48 h-48 object-contain" />
+    </div>
+    <p class="font-semibold text-lg">{{ .Name }}</p>
+    <p class="text-sm text-gray-500">{{ .Desc }}</p>
+    <p class="font-medium text-green-600 mt-2">Price: ${{ .Price }}</p>
+    <p class="text-sm text-gray-700">Stock: {{ .Quantity }}</p>
   </a>
   <button 
+    class="mt-4 w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
     hx-put="/addtocart?id={{.Id}}"
     hx-trigger="click"
     hx-swap="none"
     hx-target="#product-{{ .Id }}"
-  > Add to the cart</button>
-  <div>
-  {{ range .Tags }}
-    <span 
-      hx-get="/search?search={{.}}" 
-      hx-swap="outerhtml" 
-      hx-target="#body"
->[ {{.}} ]</span>
-  {{ end }}
+  >
+    Add to Cart
+  </button>
+  <div class="mt-2">
+    {{ range .Tags }}
+      <span 
+        class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mt-2 cursor-pointer"
+        hx-get="/search?search={{.}}" 
+        hx-swap="outerhtml" 
+        hx-target="#body"
+      >
+        [{{ . }}]
+      </span>
+    {{ end }}
   </div>
-  <hr />
 </div>
 {{ end }}
-
-

@@ -6,31 +6,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="/css/index.css">
+     <link href="/public/output.css" rel="stylesheet">
   </head>
-  <body id="body">
-    <div>USER INFO {{ .Values.UserName }}</div>
-    <img src="{{ .Values.ProfileImage }}" alt="profile image" style="width: 100px;" onerror="this.onerror=null;this.src='https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740'" >
-
+  <body id="body" class="bg-gray-100 text-gray-900">
     {{ template "navbar" . }}
-
-    {{ template "cart" . }}
-    <div id="contentcontainer" class="contentcontainer">
-      <div id="products" style="display: flex; flex-direction: column; margin-right: 220px;">
-        {{ template "products" .}}
+    
+    <div id="contentcontainer" class="contentcontainer p-6 mt-5">
+      <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4">
+         {{ template "products" .}}
       </div>
-
+      <div id="nextpage" style="grid-column: unset; grid-row: unset;">
+        {{ template "nextpage" . }}
+      </div>
     </div>
-
-  <script>
-    window.onload = function() {
-      token = "{{ .Values.SessionID }}"
-      document.cookie = "session=" + token;
-      //alert("token: " + document.cookie);
-    }
-
-    history.pushState({}, '', '/');
-  </script>
+  
+    <script>
+      window.onload = function() {
+        token = "{{ .Values.SessionID }}"
+        document.cookie = "session=" + token;
+      }
+      history.pushState({}, '', '/');
+    </script>
   </body>
 </html>
 {{ end }}

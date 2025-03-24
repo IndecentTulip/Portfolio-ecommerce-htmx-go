@@ -144,7 +144,7 @@ func main(){
   e.Renderer = tr.NewTemplate()
 
   //e.Static("/static/images", "images")
-  //e.Static("/static/css", "css")
+  e.Static("/public/", "../public")
 
   e.GET("/", func(c echo.Context) error {
 
@@ -190,7 +190,7 @@ func main(){
 
     println("HELLO?")
     var more = newStart <= PRODUCTNUM
-  
+
     loadIndex := false
     if start == range_start {
       loadIndex = true
@@ -199,6 +199,14 @@ func main(){
     if newStart > range_end{
       more = false
     } 
+
+    template := "products"
+    if loadIndex {
+      template = "index"
+    }
+    if !page_range{
+      template = "none"
+    }
 
     // TODO FIX
 
@@ -214,15 +222,6 @@ func main(){
     }
     
     webContext := m.NewGlobalContext(sqldb,ses,pag)
-
-    println("HELLO?")
-    template := "products"
-    if loadIndex {
-      template = "index"
-    }
-    if !page_range{
-      template = "none"
-    }
 
     
     return c.Render(200, template, webContext)

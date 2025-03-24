@@ -1,59 +1,79 @@
 {{ block "cart" . }}
-<div id="cart" style="position: fixed; right: 0; top: 0; width: 150px; background-color: #f0f0f0; height: 200px; overflow: scroll;">
-  <h2>Cart:</h2>
-  <div id="items">
+<div class="relative flex justify-end">
+  <button class="bg-blue-500 rounded-md" id="CartDropdown">
+    <img style="width: 50px;" src="https://www.pngmart.com/files/7/Cart-PNG-Transparent-Image.png">
+  </button>
+  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-15 overflow-scroll " id="CartDropdownMenu">
+    <div>{{ .Values.CartItemCount }} items</div>
+    <button class="bg-green-500 rounded-md" onclick="window.location.href='/c/{{ .Values.SessionID}}'">Checkout</button>
 
-  {{ template "cartitems" . }}
-
-  <button 
-    onclick="window.location.href='/c/{{ .Values.SessionID}}'">
-  Buy</button>
-
+    <div id="items" class="space-y-4 max-h-50">
+      {{ template "cartitems" . }}
+    </div>
   </div>
+</div>
+
+<script>
+  const cartdropdownButton = document.getElementById('CartDropdown');
+  const cartdropdownMenu = document.getElementById('CartDropdownMenu');
+
+  cartdropdownButton.addEventListener('click', () => {
+    cartdropdownMenu.classList.toggle('hidden');
+  });
+
+  window.addEventListener('click', (event) => {
+    if (!event.target.closest('.relative')) {
+      cartdropdownMenu.classList.add('hidden');
+    }
+  });
+</script>
+
+
 {{ end }}
 
 {{ block "cartitems" . }}
   {{ range .CartList }}
-  <div class="cart-item" id="item-{{ .CartID }}">
-    <p>{{ .Product.Name }}</p>
-    <p>Quantity:{{ .Product.Quantity }}</p>
+  <div class="cart-item p-2 bg-white rounded-md shadow-sm" id="item-{{ .CartID }}">
+    <p class="font-semibold">{{ .Product.Name }}</p>
+    <p class="text-sm text-gray-600">Quantity: {{ .Product.Quantity }}</p>
     <button
+      class="mt-2 text-red-500 hover:text-red-600 transition-colors duration-200"
       hx-delete="/removefromcart?id={{.CartID}}"
       hx-trigger="click"
       hx-swap="outerHTML"
       hx-target="#item-{{ .CartID }}"
-    >remove</button>
+    >Remove</button>
   </div>
   {{ end }}
-</div>
 {{ end }}
 
 {{ block "cartitems-oob" . }}
-  {{ if .IsNew }}
-    <div id="item-{{ .CartItem.CartID }}" hx-swap-oob="beforeend:#items">
-      <div id="item-{{ .CartItem.CartID }}" class="cart-item" >
-        <p>{{ .CartItem.Product.Name }}</p>
-        <p>Quantity:{{ .CartItem.Product.Quantity }}</p>
-        <button
-          hx-delete="/removefromcart?id={{.CartItem.CartID}}"
-          hx-trigger="click"
-          hx-swap="outerHTML"
-          hx-target="#item-{{ .CartItem.CartID }}"
-        >remove</button>
-      </div>
-    </div>
-  {{ else }}
-    <div class="cart-item" id="item-{{ .CartItem.CartID }}" hx-swap-oob="outerHTML">
-      <p>{{ .CartItem.Product.Name }}</p>
-      <p>Quantity:{{ .CartItem.Product.Quantity }}</p>
+{{ if .IsNew }}
+  <div id="item-{{ .CartItem.CartID }}" hx-swap-oob="beforeend:#items">
+    <div id="item-{{ .CartItem.CartID }}" class="cart-item p-2 bg-white rounded-md shadow-sm">
+      <p class="font-semibold">{{ .CartItem.Product.Name }}</p>
+      <p class="text-sm text-gray-600">Quantity: {{ .CartItem.Product.Quantity }}</p>
       <button
+        class="mt-2 text-red-500 hover:text-red-600 transition-colors duration-200"
         hx-delete="/removefromcart?id={{.CartItem.CartID}}"
         hx-trigger="click"
         hx-swap="outerHTML"
-        hx-target="#item-{{ .CartItem.CartID  }}"
-      >remove</button>
+        hx-target="#item-{{ .CartItem.CartID }}"
+      >Remove</button>
     </div>
-  {{ end }}
+  </div>
+{{ else }}
+  <div class="cart-item p-2 bg-white rounded-md shadow-sm" id="item-{{ .CartItem.CartID }}" hx-swap-oob="outerHTML">
+    <p class="font-semibold">{{ .CartItem.Product.Name }}</p>
+    <p class="text-sm text-gray-600">Quantity: {{ .CartItem.Product.Quantity }}</p>
+    <button
+      class="mt-2 text-red-500 hover:text-red-600 transition-colors duration-200"
+      hx-delete="/removefromcart?id={{.CartItem.CartID}}"
+      hx-trigger="click"
+      hx-swap="outerHTML"
+      hx-target="#item-{{ .CartItem.CartID }}"
+    >Remove</button>
+  </div>
 {{ end }}
-
+{{ end }}
 <!--hx-vals='{"id": {{ .Id }} }'-->
