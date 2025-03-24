@@ -6,36 +6,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title></title>
     <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.js" integrity="sha384-oeUn82QNXPuVkGCkcrInrS1twIxKhkZiFfr2TdiuObZ3n3yIeMiqcRzkIcguaof1" crossorigin="anonymous"></script>
-    <link href="css/style.css" rel="stylesheet">
+    <link href="/public/output.css" rel="stylesheet">
   </head>
   <!--
-CHANGE THIS:
+CHANGE THIS: MAKE SEARCH INTO A SEPARATE LINK
   -->
-  <body id="body">
-    <div>USER INFO {{ .Values.User.UserName }}</div>
-    <img src="{{ .Values.User.ProfileImage }}" alt="profile image" style="width: 100px;" onerror="this.onerror=null;this.src='https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740'" >
+  <body id="body" class="bg-gray-100 text-gray-900">
 
-    {{ template "navbarForProduct" . }}
+    {{ template "navbar" . }}
 
-    {{ template "cart" .}}
+    {{ template "dropdowns" . }}
 
-    <div id="test">test</div>
-    <div><img style="width: 200px;" src="data:image/png;base64,{{.Product.Image}}" alt="Product Image"/></div>
-    <p>Prod Name: {{ .Product.Name }}</p>
-    <div>{{ .Product.Id }}</div>
-    <div>{{ .Product.Desc }}</div>
-    <div>{{ .Product.Price }}</div>
-  <button 
-    hx-put="/addtocart?id={{ .Product.Id}}"
-    hx-trigger="click"
-    hx-swap="none"
-  > Add to the cart</button>
-    <div> you can add tags, ability to choose color if possible, etc</div>
+    <div id="contentcontainer" class="contentcontainer p-6 mt-5">
+      <div id="products" class="">
+        <div id="test">test</div>
+        <div><img style="width: 200px;" src="data:image/png;base64,{{.Values.Product.Image}}" alt="Product Image"/></div>
+        <p>Prod Name: {{ .Values.Product.Name }}</p>
+        <div>{{ .Values.Product.Id }}</div>
+        <div>{{ .Values.Product.Desc }}</div>
+        <div>{{ .Values.Product.Price }}</div>
+        <button 
+          hx-put="/addtocart?id={{ .Values.Product.Id}}"
+          hx-trigger="click"
+          hx-swap="none"
+        > Add to the cart</button>
+          <div> you can add tags, ability to choose color if possible, etc</div>
+      </div>
+    </div>
   </body>
   <script>
     window.onload = function() {
       //alert("token: " + document.cookie);
     }
   </script>
+  <script src="/public/dropdown_script.js"></script>
 </html>
 {{ end }}

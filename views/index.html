@@ -10,6 +10,8 @@
   </head>
   <body id="body" class="bg-gray-100 text-gray-900">
     {{ template "navbar" . }}
+
+    {{ template "dropdowns" . }}
     
     <div id="contentcontainer" class="contentcontainer p-6 mt-5">
       <div id="products" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-4">
@@ -28,6 +30,8 @@
       history.pushState({}, '', '/');
     </script>
   </body>
+
+  <script src="/public/dropdown_script.js"></script>
 </html>
 {{ end }}
 

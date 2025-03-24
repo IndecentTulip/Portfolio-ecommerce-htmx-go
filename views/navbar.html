@@ -1,64 +1,49 @@
 {{ block "navbar" . }}
 <div class="fixed top-0 left-0 right-0 bg-white shadow-md z-50 grid grid-cols-3 items-center px-4">
 
-<div class="relative">
-  <button class="bg-blue-500 rounded-md" id="ProfileDropdown">
-    <img 
-      type="button"
-      src="{{ .Values.ProfileImage }}" 
-      alt="profile image" 
-      class="w-12 h-12 rounded-full object-cover"
-      onerror="this.onerror=null;this.src='https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740'">
-  </button>
-  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-2" id="ProfileDropdownMenu">
-    <span class="block"> Welcome: {{ .Values.UserName }} </span>
-    <hr>
-    <span class="block"> LoginWith </span>
-    <a href="http://portfolio.serverpit.com:25000/login?type=google" 
-      class="block bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200 mt-1">Google</a>
-    <a href="http://portfolio.serverpit.com:25000/login?type=github" 
-      class="block bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition-colors duration-200 mt-1">GitHub</a>
+  <div>
+    put burger menu &
+    put logo here
   </div>
-</div>
 
+  <div id="searchbar" class="flex justify-center">
+    <input 
+      class="w-80"
+      type="search"
+      name="search"
+      placeholder="Type To Search"
+      value="{{ .Values.SearchTerm }}"
+      hx-get="/search?newSearch=1"
+      hx-trigger="input changed"
+      hx-target="#products"
+      hx-indicator=".htmx-indicator"
+      hx-swap="innerHTML">
+    <div class="htmx-indicator mt-5 absolute text-green-600 font-semibold ">Searching...</div>
+  </div>
 
+  <div class="flex justify-end gap-10 px-2">
 
-<script>
-  const profdropdownButton = document.getElementById('ProfileDropdown');
-  const profdropdownMenu = document.getElementById('ProfileDropdownMenu');
+  <div class="relative">
+    <button class="bg-blue-500 rounded-md" id="ProfileDropdown">
+      <img 
+        type="button" src="{{ .Values.ProfileImage }}" 
+        alt="profile image" class="w-12 h-12 rounded-full object-cover"
+        onerror="this.onerror=null;this.src='https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740'">
+    </button>
+  </div>
+  <div class="relative">
+    <button class="bg-blue-500 rounded-md" id="CartDropdown">
+      <img style="width: 50px;" src="https://www.pngmart.com/files/7/Cart-PNG-Transparent-Image.png">
+    </button>
+  </div>
 
-  profdropdownButton.addEventListener('click', () => {
-    profdropdownMenu.classList.toggle('hidden');
-  });
-
-  window.addEventListener('click', (event) => {
-    if (!event.target.closest('.relative')) {
-      profdropdownMenu.classList.add('hidden');
-    }
-  });
-</script>
-
- <div id="searchbar" class="flex justify-center">
-   <input 
-     class="w-80"
-     type="search"
-     name="search"
-     placeholder="Type To Search"
-     value="{{ .Values.SearchTerm }}"
-     hx-get="/search?newSearch=1"
-     hx-trigger="input changed"
-     hx-target="#products"
-     hx-indicator=".htmx-indicator"
-     hx-swap="innerHTML">
-   <div class="htmx-indicator mt-5 absolute text-green-600 font-semibold ">Searching...</div>
- </div>
-
-
-  {{ template "cart" . }}
+  </div>
 
 </div>
 
 {{ end }}
+
+<!--  {{ template "cart" . }} -->
 
 {{ block "navbarForProduct" . }}
 <div class="navbar" >

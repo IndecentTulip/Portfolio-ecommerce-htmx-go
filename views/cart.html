@@ -1,9 +1,9 @@
 {{ block "cart" . }}
-<div class="relative flex justify-end">
+<div class="relative">
   <button class="bg-blue-500 rounded-md" id="CartDropdown">
     <img style="width: 50px;" src="https://www.pngmart.com/files/7/Cart-PNG-Transparent-Image.png">
   </button>
-  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-15 overflow-scroll " id="CartDropdownMenu">
+  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-2 overflow-scroll " id="CartDropdownMenu">
     <div>{{ .Values.CartItemCount }} items</div>
     <button class="bg-green-500 rounded-md" onclick="window.location.href='/c/{{ .Values.SessionID}}'">Checkout</button>
 
@@ -12,22 +12,6 @@
     </div>
   </div>
 </div>
-
-<script>
-  const cartdropdownButton = document.getElementById('CartDropdown');
-  const cartdropdownMenu = document.getElementById('CartDropdownMenu');
-
-  cartdropdownButton.addEventListener('click', () => {
-    cartdropdownMenu.classList.toggle('hidden');
-  });
-
-  window.addEventListener('click', (event) => {
-    if (!event.target.closest('.relative')) {
-      cartdropdownMenu.classList.add('hidden');
-    }
-  });
-</script>
-
 
 {{ end }}
 

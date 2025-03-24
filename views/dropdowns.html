@@ -1,0 +1,22 @@
+{{ block "dropdowns" .}}
+<div class="fixed top-15 right-0 flex justify-end w-full gap-6">
+  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-2 mr-10" id="ProfileDropdownMenu">
+    <span class="block"> Welcome: {{ .Values.UserName }} </span>
+    <hr>
+    <span class="block"> LoginWith </span>
+    <a href="http://portfolio.serverpit.com:25000/login?type=google" 
+      class="block bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors duration-200 mt-1">Google</a>
+    <a href="http://portfolio.serverpit.com:25000/login?type=github" 
+      class="block bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition-colors duration-200 mt-1">GitHub</a>
+  </div>
+  <div class="hidden absolute bg-gray-200 font-semibold text-lg px-1 mt-2 overflow-scroll mr-5" id="CartDropdownMenu">
+    <div>items</div>
+    <button class="bg-green-500 rounded-md" onclick="window.location.href='/c/{{ .Values.SessionID}}'">Checkout</button>
+
+    <div id="items" class="space-y-4 max-h-50">
+      {{ template "cartitems" . }}
+    </div>
+  </div>
+</div>
+{{end}}
+<!--{{ .Values.CartItemCount }} -->

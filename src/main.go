@@ -208,6 +208,7 @@ func main(){
       template = "none"
     }
 
+
     // TODO FIX
 
     ses := wc.SessionContext{
@@ -412,10 +413,12 @@ func main(){
     } 
 
     type WebContext struct{
-      Product wc.Product
       Values struct{
         SessionID string
-        User wc.UserContext 
+        ProfileImage string 
+        UserName string
+        Product wc.Product
+        SearchTerm string
       }
       CartList []wc.CartItem
     }
@@ -425,10 +428,12 @@ func main(){
 
     cartList := db.SelectCart(sqldb,sessionID)
     webContext := WebContext{
-      Product: product,
-      Values: struct{SessionID string; User wc.UserContext}{
+      Values: struct{SessionID string; ProfileImage string; UserName string; Product wc.Product; SearchTerm string}{
         SessionID: sessionID,
-        User: userContext,
+        ProfileImage: userContext.ProfileImage,
+        UserName: userContext.UserName,
+        Product: product,
+        SearchTerm: "",
       },
       CartList: cartList,
     }
