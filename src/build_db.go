@@ -18,6 +18,8 @@ func mai(){
     log.Fatal(err)
   }
 
+  // make it drop all the db
+
   crdb.CreateUsersTable(db)
   crdb.CreateProductsTable(db)
   crdb.CreateTagsTable(db)
