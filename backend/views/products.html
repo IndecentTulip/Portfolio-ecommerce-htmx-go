@@ -1,0 +1,57 @@
+
+{{ block "products" . }}
+
+    {{ range .ProductsList }}
+      {{ template "product" . }}
+    {{ end }}
+
+  {{ if .Values.More }}
+    <div 
+      hx-trigger="revealed"
+      hx-swap="outerHTML scroll:top"
+      hx-get="http://localhost:25000/main?start={{ .Values.Next }}&num={{ .Values.Strip_Num }}&search={{ .Values.SearchTerm }}"
+      class="text-center p-4 bg-gray-200 rounded-lg shadow-md cursor-pointer hover:bg-gray-300 transition"
+    >
+      Load more products...
+    </div>
+  {{ end }}
+  {{ if .Values.NoMore }}
+    <div id="nextpage" hx-swap-oob="true" className="col-auto row-auto">
+        {{ template "nextpage" . }}
+    </div>
+  {{ end }}
+
+{{ end }}
+
+{{ block "product" . }}
+<div class="p-4 bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-all" id="product-{{ .Id }}">
+  <a href="/p/{{ .Id }}" class="block">
+    <div class="flex justify-center mb-4">
+      <img src="data:image/png;base64,{{.Image}}" alt="Product Image" class="object-contain w-52 h-52" />
+    </div>
+    <p class="font-semibold text-lg">{{ .Name }}</p>
+    <p class="text-sm text-gray-500">{{ .Desc }}</p>
+    <p class="font-medium text-green-600 mt-2">Price: ${{ .Price }}</p>
+    <p class="text-sm text-gray-700">Stock: {{ .Quantity }}</p>
+  </a>
+  <button 
+    class="mt-4 w-full py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+    hx-get="/addtocart?id={{.Id}}"
+    hx-trigger="click"
+    hx-swap="none"
+    hx-target="#product-{{ .Id }}"
+  >
+    Add to Cart
+  </button>
+  <div class="mt-2">
+    {{ range .Tags }}
+      <a
+        class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mt-2 cursor-pointer"
+        href="/?num=0&search={{.}}"
+      >
+      [{{ . }}]
+      </a>
+    {{ end }}
+  </div>
+</div>
+{{ end }}
