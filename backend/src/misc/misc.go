@@ -15,7 +15,7 @@ func NewPage(sqldb *sql.DB, session wc.SessionContext, page wc.PageContext) wc.G
   const ITEMS_PER_PAGE = 20 // for both PRODUCTSLIST & NEXTPRODUCTSNUMS 
 
   if page.Is_Searching {
-    productsList,PRODUCTNUM = db.GetProductSearch(sqldb, page.SearchTerm, (page.Next - (ITEMS_PER_PAGE/2)))
+    productsList,PRODUCTNUM = db.GetProductListSearch(sqldb, page.SearchTerm, (page.Next - (ITEMS_PER_PAGE/2)))
   }else{
     productsList,PRODUCTNUM = db.GetProductsList(sqldb,(page.Next - (ITEMS_PER_PAGE/2)))
   }
@@ -68,7 +68,7 @@ func NewGlobalContext(sqldb *sql.DB, session wc.SessionContext, page wc.PageCont
   const ITEMS_PER_PAGE = 20 // for both PRODUCTSLIST & NEXTPRODUCTSNUMS 
 
   if page.Is_Searching {
-    productsList,PRODUCTNUM = db.GetProductSearch(sqldb, page.SearchTerm, (page.Next - (ITEMS_PER_PAGE/2)))
+    productsList,PRODUCTNUM = db.GetProductListSearch(sqldb, page.SearchTerm, (page.Next - (ITEMS_PER_PAGE/2)))
   }else{
     productsList,PRODUCTNUM = db.GetProductsList(sqldb,(page.Next - (ITEMS_PER_PAGE/2)))
   }

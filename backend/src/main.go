@@ -33,14 +33,14 @@ func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
   sessionID := c.Request().Header.Get("Cookie")
   if sessionID == ""{
     sessionID = db.CreateSession(sqldb)
-    db.UpdatePageNumSes(sqldb,sessionID,1)
+    //db.UpdatePageNumSes(sqldb,sessionID,1)
   }else{
     sessionID = strings.Replace(sessionID, "session=", "",1)
     _,err := db.GetSession(sqldb,sessionID)
     if err != nil{
       sessionID = db.CreateSession(sqldb)
       fmt.Println(sessionID)
-      db.UpdatePageNumSes(sqldb,sessionID,1)
+      //db.UpdatePageNumSes(sqldb,sessionID,1)
     }
   }
   
@@ -165,6 +165,8 @@ func main(){
 		// tab shit
     stripNumStr := c.QueryParam("num")
     searchStr := c.QueryParam("search")
+    searchStr = strings.TrimSpace(searchStr)  // Remove whitespace
+    searchStr = html.EscapeString(searchStr) // Prevent XSS
 
 		if searchStr == ""{
 			fmt.Println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
@@ -200,7 +202,7 @@ func main(){
 		var more = offset+10 <= range_end
 
 		if searchStr != ""{
-			productsList,PRODUCTNUM = db.GetProductSearch(postgredb,searchStr,offset)
+			productsList,PRODUCTNUM = db.GetProductListSearch(postgredb,searchStr,offset)
 		}else{
 			productsList,PRODUCTNUM = db.GetProductsList(postgredb, offset)
 		}
@@ -249,7 +251,7 @@ func main(){
       }
       newPageNum := num / ITEMS_PER_PAGE
       newPageNum++
-      db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
+      //db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
     }
 
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
@@ -258,8 +260,8 @@ func main(){
     // 2 : 20 - 30
     // 3 : 40 - 50
     page := int(int(sessionInfo.CurrentPage) - 1)
-    db.UpdatePageSearchNumSes(sqldb,sessionID,1)
-    db.UpdateSearchingStatus(sqldb,sessionID,false)
+    //db.UpdatePageSearchNumSes(sqldb,sessionID,1)
+    //db.UpdateSearchingStatus(sqldb,sessionID,false)
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
 
@@ -330,7 +332,7 @@ func main(){
       }
       newPageNum := num / ITEMS_PER_PAGE
       newPageNum++
-      db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
+      //db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
     }
 
     // maybe it would be better idea to expect newSearch to be ether 0 or 1
@@ -348,9 +350,9 @@ func main(){
     searchTerm = html.EscapeString(searchTerm) // Prevent XSS
 
     if searchTerm != ""{
-      db.UpdateSearchingStatus(sqldb, sessionID, true)
+      //db.UpdateSearchingStatus(sqldb, sessionID, true)
     }else{
-      db.UpdateSearchingStatus(sqldb,sessionID,false)
+      //db.UpdateSearchingStatus(sqldb,sessionID,false)
     }
 
     sessionInfo,_ := db.GetSession(sqldb,sessionID)
@@ -364,7 +366,7 @@ func main(){
       start = range_start 
     }
 
-    _,PRODUCTNUM := db.GetProductSearch(sqldb,searchTerm,start)
+    _,PRODUCTNUM := db.GetProductListSearch(sqldb,searchTerm,start)
 
     page_range := start >= range_start && start <= range_end  
 

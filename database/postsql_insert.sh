@@ -21,8 +21,10 @@ else
     UUID=$(psql -U "$DB_USER" -d "$DB_NAME" -t -c "SELECT gen_random_uuid();" | xargs)
     NAME="product $i"
     PRICE=$((25 + i))
-    DESCRIPT="lorem Ipsum"
-    [ "$i" -gt 50 ] && DESCRIPT="DEMO TEST"
+    DESCRIPT="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."
+    [ "$i" -gt 50 ] && DESCRIPT="DEMO TEST DEMO TEST DEMO TEST DEMO TEST DEMO TEST"
+    [ "$i" -gt 100 ] && DESCRIPT="It is not knowledge, but the act of learning, not possession but the act of getting there, which grants the greatest enjoyment"
+    [ "$i" -gt 200 ] && DESCRIPT="A computer is like air conditioning - it becomes useless when you open Windows"
 
     psql -U "$DB_USER" -d "$DB_NAME" -c \
     "INSERT INTO products (id, name, price, descript, quantity, image) 
