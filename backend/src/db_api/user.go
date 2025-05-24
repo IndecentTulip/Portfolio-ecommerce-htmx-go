@@ -2,6 +2,7 @@ package db_api
 import (
 	"database/sql"
 	"log"
+	"fmt"
 
 	wc "HtmxReactGolang/web_context"
 
