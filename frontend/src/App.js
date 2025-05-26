@@ -1,3 +1,4 @@
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/clerk-react";
 import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import Main from './Main';
 import ProductPage from './ProductPage';
@@ -9,7 +10,7 @@ const App = () => {
     <Routes>
       <Route path="/" element={
         <WrapperPage>
-          <Main/>
+          <Main />
         </WrapperPage>
       } />
       <Route path="/p/:id" element={
@@ -17,6 +18,19 @@ const App = () => {
           <ProductPage />
         </WrapperPage>
       } />
+      <Route path="/c" element={
+        <WrapperPage>
+          <SignedIn>
+            <div>.</div>
+            <div>.</div>
+            <div>cart page will be here</div>
+          </SignedIn>
+          <SignedOut>
+            <RedirectToSignIn />
+          </SignedOut>
+        </WrapperPage>
+      } />
+
     </Routes>
   </Router>
   );

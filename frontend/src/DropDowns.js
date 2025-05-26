@@ -1,3 +1,4 @@
+import { SignInButton, SignOutButton } from "@clerk/clerk-react";
 import CartItems from './CartItems';
 
 const DropDowns = ({ isProfileOpen, isCartOpen }) => {
@@ -8,19 +9,8 @@ const DropDowns = ({ isProfileOpen, isCartOpen }) => {
         <div className="absolute bg-gray-200 font-semibold text-lg px-4 py-2 mt-2 mr-11 rounded shadow-md">
           <span className="block">Welcome:</span>
           <hr />
-          <span className="block mt-2">Login With</span>
-          <a
-            href="http://portfolio.serverpit.com:25000/login?type=google"
-            className="block bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 mt-2 transition"
-          >
-            Google
-          </a>
-          <a
-            href="http://portfolio.serverpit.com:25000/login?type=github"
-            className="block bg-gray-800 text-white py-2 px-4 rounded-lg hover:bg-gray-900 mt-2 transition"
-          >
-            GitHub
-          </a>
+            <SignInButton className="block bg-blue-500 text-white py-2 px-5 rounded-lg hover:bg-blue-900 mt-2 transition" />
+            <SignOutButton className="block bg-gray-800 text-white py-2 px-4 rounded-lg hover:bg-gray-900 mt-2 transition" />
         </div>
       )}
       {/*<Profile Dropdown */}

@@ -29,18 +29,18 @@ import (
 	"github.com/stripe/stripe-go/v72/checkout/session"
 )
 
-func handleSessionWithoutAcc(sqldb *sql.DB, c echo.Context) string{
+func handleSessionWithoutAcc(postgredb *sql.DB, c echo.Context) string{
   sessionID := c.Request().Header.Get("Cookie")
   if sessionID == ""{
-    sessionID = db.CreateSession(sqldb)
-    //db.UpdatePageNumSes(sqldb,sessionID,1)
+    sessionID = db.CreateSession(postgredb)
+    //db.UpdatePageNumSes(postgredb,sessionID,1)
   }else{
     sessionID = strings.Replace(sessionID, "session=", "",1)
-    _,err := db.GetSession(sqldb,sessionID)
+    _,err := db.GetSession(postgredb,sessionID)
     if err != nil{
-      sessionID = db.CreateSession(sqldb)
+      sessionID = db.CreateSession(postgredb)
       fmt.Println(sessionID)
-      //db.UpdatePageNumSes(sqldb,sessionID,1)
+      //db.UpdatePageNumSes(postgredb,sessionID,1)
     }
   }
   
@@ -140,7 +140,6 @@ func main(){
     fmt.Println("creating a new dummy db")
   }
 
-  sqldb := db.CreateDB()
   postgredb := db.ConnectToDB()
 	fmt.Println(postgredb)
 
@@ -160,6 +159,11 @@ func main(){
   e.Static("/public/", "../public")
 
 	e.GET("/main", func(c echo.Context) error {
+
+		//sessionID := c.Request().Header.Get("Cookie")
+    //
+		//fmt.Println("Session ???? HMMMMMMMm")
+		//fmt.Println(sessionID)
 		// iteration shit
     startStr := c.QueryParam("start")
 		// tab shit
@@ -239,7 +243,7 @@ func main(){
 	// LEGACY: TODO REMOVE
   e.GET("/", func(c echo.Context) error {
 
-    sessionID := handleSessionWithoutAcc(sqldb,c)
+    sessionID := handleSessionWithoutAcc(postgredb,c)
     
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
@@ -251,17 +255,17 @@ func main(){
       }
       newPageNum := num / ITEMS_PER_PAGE
       newPageNum++
-      //db.UpdatePageNumSes(sqldb,sessionID,newPageNum)
+      //db.UpdatePageNumSes(postgredb,sessionID,newPageNum)
     }
 
-    sessionInfo,_ := db.GetSession(sqldb,sessionID)
+    sessionInfo,_ := db.GetSession(postgredb,sessionID)
 
     // 1 : 1 - 10
     // 2 : 20 - 30
     // 3 : 40 - 50
     page := int(int(sessionInfo.CurrentPage) - 1)
-    //db.UpdatePageSearchNumSes(sqldb,sessionID,1)
-    //db.UpdateSearchingStatus(sqldb,sessionID,false)
+    //db.UpdatePageSearchNumSes(postgredb,sessionID,1)
+    //db.UpdateSearchingStatus(postgredb,sessionID,false)
     range_start := page * ITEMS_PER_PAGE
     range_end := range_start + (ITEMS_PER_PAGE/2)
 
@@ -277,7 +281,7 @@ func main(){
 
     var newStart = start + (ITEMS_PER_PAGE/2)
 
-    _,PRODUCTNUM := db.GetProductsList(sqldb,start)
+    _,PRODUCTNUM := db.GetProductsList(postgredb,start)
 
     println("HELLO?")
     var more = newStart <= PRODUCTNUM
@@ -313,14 +317,14 @@ func main(){
       SearchTerm: "",
     }
     
-    webContext := m.NewGlobalContext(sqldb,ses,pag)
+    webContext := m.NewGlobalContext(postgredb,ses,pag)
 
     
     return c.Render(200, template, webContext)
   });
 
   e.GET("/search", func(c echo.Context) error {
-    sessionID := handleSessionWithoutAcc(sqldb,c)
+    sessionID := handleSessionWithoutAcc(postgredb,c)
 
     startStr := c.QueryParam("start")
     start, err := strconv.Atoi(startStr)
@@ -332,7 +336,7 @@ func main(){
       }
       newPageNum := num / ITEMS_PER_PAGE
       newPageNum++
-      //db.UpdatePageSearchNumSes(sqldb,sessionID,newPageNum)
+      //db.UpdatePageSearchNumSes(postgredb,sessionID,newPageNum)
     }
 
     // maybe it would be better idea to expect newSearch to be ether 0 or 1
@@ -350,12 +354,12 @@ func main(){
     searchTerm = html.EscapeString(searchTerm) // Prevent XSS
 
     if searchTerm != ""{
-      //db.UpdateSearchingStatus(sqldb, sessionID, true)
+      //db.UpdateSearchingStatus(postgredb, sessionID, true)
     }else{
-      //db.UpdateSearchingStatus(sqldb,sessionID,false)
+      //db.UpdateSearchingStatus(postgredb,sessionID,false)
     }
 
-    sessionInfo,_ := db.GetSession(sqldb,sessionID)
+    sessionInfo,_ := db.GetSession(postgredb,sessionID)
 
     page := int(int(sessionInfo.CurrentPageSearch) - 1)
 
@@ -366,7 +370,7 @@ func main(){
       start = range_start 
     }
 
-    _,PRODUCTNUM := db.GetProductListSearch(sqldb,searchTerm,start)
+    _,PRODUCTNUM := db.GetProductListSearch(postgredb,searchTerm,start)
 
     page_range := start >= range_start && start <= range_end  
 
@@ -397,7 +401,7 @@ func main(){
       SearchTerm: searchTerm,
     }
 
-    webContext := m.NewGlobalContext(sqldb,ses,pag)
+    webContext := m.NewGlobalContext(postgredb,ses,pag)
 
     template := "products"
     if loadIndex {
@@ -428,10 +432,10 @@ func main(){
     fmt.Println("!!!! API /addtocart !!!!")
     println(sessionID)
 
-    db.AddToCart(sqldb,sessionID,productID)
+    db.AddToCart(postgredb,sessionID,productID)
 
     // FIX
-    productInfo := db.SelectCartItem(sqldb,productID,sessionID)
+    productInfo := db.SelectCartItem(postgredb,productID,sessionID)
 
     type oobProduct struct{
       CartItem wc.CartItem
@@ -463,7 +467,7 @@ func main(){
       sessionID = strings.Replace(sessionID, "session=", "",1)
     }
 
-    db.AddToCart(sqldb,sessionID,productID)
+    db.AddToCart(postgredb,sessionID,productID)
 
     var sendContext any
 
@@ -474,7 +478,7 @@ func main(){
   e.DELETE("/removefromcart", func(c echo.Context) error {
     productID := c.QueryParam("id")
 
-    db.DeleteFromCart(sqldb, productID)
+    db.DeleteFromCart(postgredb, productID)
 
     var sendContext any
 
@@ -491,7 +495,7 @@ func main(){
     fmt.Println(productId)
     fmt.Println(sessionID)
 
-    userloggedIn := db.IsLoggedIn(sqldb, sessionID)
+    userloggedIn := db.IsLoggedIn(postgredb, sessionID)
 
     var userContext wc.UserContext
     if !userloggedIn{
@@ -500,7 +504,7 @@ func main(){
         ProfileImage: "https://img.freepik.com/free-vector/blue-circle-with-white-user_78370-4707.jpg?t=st=1741218983~exp=1741222583~hmac=1b0ea872dd8d4b7b578200204a9df957dd072b79cd6b9644780d786ed6756b2b&w=740",
       }
     }else{
-      userContext = db.GetUser(sqldb,sessionID) 
+      userContext = db.GetUser(postgredb,sessionID) 
     } 
 
     type WebContext struct{
@@ -514,10 +518,10 @@ func main(){
       CartList []wc.CartItem
     }
 
-    product :=  db.GetProduct(sqldb,productId)
-    //session := wc.NewSessionContext(sqldb, sessionID, 0)
+    product :=  db.GetProduct(postgredb,productId)
+    //session := wc.NewSessionContext(postgredb, sessionID, 0)
 
-    cartList := db.SelectCart(sqldb,sessionID)
+    cartList := db.SelectCart(postgredb,sessionID)
     webContext := WebContext{
       Values: struct{SessionID string; ProfileImage string; UserName string; Product wc.Product; SearchTerm string}{
         SessionID: sessionID,
@@ -538,7 +542,7 @@ func main(){
     fmt.Println("BYING")
     fmt.Println(sessionID)
 
-    cartInfo := db.SelectCart(sqldb,sessionID)
+    cartInfo := db.SelectCart(postgredb,sessionID)
     finalPrice := db.CountFinalPrice(cartInfo)
 
 
@@ -563,7 +567,7 @@ func main(){
       sessionID = strings.Replace(sessionID, "session=", "",1)
     }
 
-    cartInfo := db.SelectCart(sqldb,sessionID)
+    cartInfo := db.SelectCart(postgredb,sessionID)
     var cartStripe []*stripe.CheckoutSessionLineItemParams
 
     for _,item := range cartInfo{
@@ -629,8 +633,8 @@ func main(){
       
       println("HEY HEY HEY HEY HEY HEY HEY HEY HEY HEY")
       println(sessionID)
-      db.DeleteFromProducts(sqldb, sessionID)
-      db.DeleteCart(sqldb, sessionID)
+      db.DeleteFromProducts(postgredb, sessionID)
+      db.DeleteCart(postgredb, sessionID)
       println("Webhook seccess hit!!!!!!!!!")
       return c.String(http.StatusOK, "Payment successful, cart updated!")
     default:
@@ -708,8 +712,8 @@ func main(){
       ProfileImage: userInfo["picture"].(string),
     }
 
-    db.InsertIntoUser(sqldb, userContext)
-    db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
+    db.InsertIntoUser(postgredb, userContext)
+    db.UpdateUserSes(postgredb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
     return c.Redirect(http.StatusSeeOther, "http://portfolio.serverpit.com:25000/")
@@ -754,8 +758,8 @@ func main(){
       ProfileImage: *user.AvatarURL,
     }
 
-    db.InsertIntoUser(sqldb, userContext)
-    db.UpdateUserSes(sqldb,sessionID,userContext.UserID)
+    db.InsertIntoUser(postgredb, userContext)
+    db.UpdateUserSes(postgredb,sessionID,userContext.UserID)
     println("CALLED UpdateUserSes")
 
     return c.Redirect(http.StatusSeeOther, "http://portfolio.serverpit.com:25000/")
